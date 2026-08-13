@@ -78,11 +78,68 @@ Válaszban először **azonosítsd az érintett táblacellát** a `SPEC.md` B3 s
 
 ```
 .
-├── CLAUDE.md            # ez a fájl — tartós szabályok
-├── SPEC.md              # módszertan + specifikáció (igazság forrása)
-├── src/
-│   ├── state_machine.py # generikus motor
-│   └── transition_table.py  # az átmeneti tábla adatként
+├── CLAUDE.md                         # ez a fájl — tartós szabályok
+├── SPEC.md                           # módszertan + specifikáció (igazság forrása)
+├── VERSION                           # build-verzió, ld. 9. pont
+├── deploy.sh                         # deploy a docker dev/teszt HA-ba, ld. 10. pont
+├── custom_components/timed_switch/   # a tényleges HA custom integráció (ez deployol)
+│   ├── manifest.json
+│   ├── const.py
+│   ├── state_machine.py              # generikus, tábla-vezérelt motor (SPEC.md A2/5)
+│   ├── transition_table.py           # SPEC.md B3.A/B3.B mint adat
+│   ├── controller.py                 # Controller: mindkét gép, I/O, timerek, Store
+│   ├── helpers.py                    # cron-kiértékelés, PersistedState
+│   ├── config_flow.py
+│   ├── switch.py / sensor.py / number.py / binary_sensor.py
+│   ├── __init__.py
+│   ├── strings.json
+│   └── translations/
 └── tests/
-    └── test_transitions.py
+    └── test_transitions.py           # a state_machine.py + transition_table.py tesztje,
+                                       # HA-futásidő nélkül (ld. 10. pont)
 ```
+
+Megjegyzés: a `state_machine.py`/`transition_table.py` a `custom_components/timed_switch/`
+alatt élnek (nem külön `src/`-ben), mert HA custom integrációként ezeknek fizikailag a
+komponens-mappában kell lenniük ahhoz, hogy deployolhatók legyenek — az A2/5 elv (tábla mint
+adat, generikus motor) ettől függetlenül érvényes, csak a fájlok helye tér el az eredeti
+tervtől.
+
+## 9. Verziószám
+
+Minden érdemi kódmódosításnál emelni kell a build-számot: a `VERSION` fájl utolsó (4
+számjegyű) szegmensét, és a `custom_components/timed_switch/manifest.json` `version`
+mezőjét ugyanarra az értékre — pl. `0.1.0000` → `0.1.0001`. A `deploy.sh` ezt automatikusan
+elvégzi minden futtatáskor, kézzel nem kell piszkálni.
+
+## 10. Fejlesztői/deploy környezet
+
+- **Cél:** élő docker dev/teszt Home Assistant, host-perzisztencia: `/mnt/3-Data/docker.data/home-assistant` (konténerben `/config`), konténer neve: `homeassistant`.
+- **Domain-döntés:** a komponens szándékosan a `timed_switch` domain-t/mappát használja, és ezzel **felülírja** a korábbi (Ansible-es, `/MyDevelopment/Ansible/MyInventory.home/roles/home-assistant/custom_components/timed_switch/`) projekt kódját, ami korábban ugyanezen a domain-en, "MyTimer" config entry néven futott ebben a HA-ban. Ez tudatos, jóváhagyott döntés (nem véletlen ütközés) — az új komponens felváltja a régit, nem mellette fut.
+- **Deploy:** `./deploy.sh` a projekt gyökeréből. Nem `rsync`/`sudo` a host-útvonalra (a `/mnt/3-Data/docker.data/home-assistant` root-tulajdonú, a fejlesztő user nincs a `root` csoportban, és a sudo jelszót igényel, nem automatizálható) — hanem a docker daemonon keresztül, `docker exec`/`docker cp`-vel, ami a konténerben **root**-ként fut, így a hívó user `docker` csoporttagsága elég, sudo nélkül. A script emeli a verziót, majd (opcionálisan, `--no-restart`-tal kihagyható) újraindítja a konténert és kiírja a friss logot.
+- **Éles teszt, nem csak elmélet:** a SPEC.md-et és a kódot ebben a környezetben, valós HA-újraindításokkal, log-alapján validáljuk — ha egy teszt vagy feltételezés téves, itt derül ki, nem a felhasználó éles rendszerén.
+
+## 11. Verifikált HA-API megjegyzések (HA 2025.9.4, ellenőrizve élőben)
+
+A CLAUDE.md 5. pontja szerint ("Dokumentáció, nem emlékezet") ezek a tények **ténylegesen
+ellenőrizve** lettek ebben a HA-verzióban (nem feltételezés), hogy legközelebb ne kelljen
+újra kitalálni/hibázni:
+
+- `homeassistant.helpers.dispatcher.async_dispatcher_send` **szinkron** `@callback` függvény
+  ebben a verzióban, NEM awaitolható coroutine — `await`-elve `TypeError: object NoneType
+  can't be used in 'await' expression` hibát dob. Simán hívandó, await nélkül.
+- `async_dispatcher_connect` szintén szinkron, egy unsubscribe callable-t ad vissza
+  közvetlenül (nem awaitolandó).
+- **Device-csoportosítás kötelező minden entitáshoz** (`device_info` property, azonos
+  `(DOMAIN, entry_id)` identifiers minden entitáson) — enélkül az entitások nem jelennek meg
+  egy közös eszközkártyaként a *Beállítások → Eszközök és szolgáltatások* nézetben, csak
+  szórt, kontextus nélküli listaelemekként. Lásd SPEC.md B2.3.
+  **Fontos csapda:** ha egy entitás `unique_id`-ja már regisztrálva volt a device_info
+  hozzáadása ELŐTT (pl. korábbi kód-verzióból maradt entity registry bejegyzés), a
+  `device_id` utólag NEM töltődik ki automatikusan újraindításra — az entity registry
+  releváns sorait törölni kell (`.storage/core.entity_registry`), hogy a következő indulás
+  frissen, a device-linkeléssel együtt regisztrálja őket.
+- `async_call_later(hass, delay_seconds, callback)` és `async_track_time_interval(hass,
+  callback, timedelta)` — mindkettő szinkron, egy cancel-callable-t ad vissza.
+- `docker exec <container> whoami` → `root` ebben a HA docker image-ben — a konténerben
+  minden fájlművelet root jogosultsággal fut, függetlenül a host-usertől.

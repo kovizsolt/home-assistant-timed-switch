@@ -16,6 +16,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import slugify
 
+from homeassistant.helpers import storage
+
 from .const import (
     CONF_CHECK_INTERVAL,
     CONF_MANUAL_TIMEOUT,
@@ -23,6 +25,8 @@ from .const import (
     CONF_ON_CRONS,
     DOMAIN,
     PLATFORMS,
+    STORE_KEY,
+    STORE_VERSION,
 )
 from .controller import Controller
 from .helpers import parse_cron_list
@@ -68,6 +72,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """HA az entitás-/device-registry bejegyzéseket automatikusan törli a config entry
+    törlésekor — de a saját Store JSON fájlunkat (.storage/timed_switch/<entry_id>/state.json)
+    NEM, ez a mi felelősségünk, különben árván marad a lemezen."""
+    store = storage.Store(hass, STORE_VERSION, f"{DOMAIN}/{entry.entry_id}/{STORE_KEY}.json")
+    await store.async_remove()
 # --------------------------------------------------------------------------------------------------
 # EOF
 # --------------------------------------------------------------------------------------------------

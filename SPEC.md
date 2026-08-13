@@ -173,6 +173,8 @@ Manuális beavatkozás esetén a kapcsoló egy konfigurált időtartamig ("manua
 | kimenet (UI) | `number.<name>_manual_timeout` | number (mp) | Futásidejű, config-alapértéktől eltérő `manual_timeout` beállítása. |
 | kimenet (UI) | `number.<name>_check_interval` | number (mp) | Futásidejű, config-alapértéktől eltérő `check_interval` beállítása; `0` = a poller (`state_check`) teljesen kikapcsolva (lásd B2.4). |
 
+**Device-csoportosítás:** a fenti táblázat összes entitása (a `target_entity_id` kivételével, ami külső entitás) egyetlen közös HA Device alá tartozik, komponens-példányonként egy Device (azonosító: `(DOMAIN, entry_id)`). Enélkül az entitások a HA UI-n szórt, kontextus nélküli listaelemekként jelennek meg, nem egy áttekinthető eszközkártyaként — ez a felhasználói felület szempontjából ugyanolyan kötelező elem, mint bármelyik fenti sor.
+
 ### B2.4 Időzítők / paraméterek
 
 | Név | Érték | Jelentés |
