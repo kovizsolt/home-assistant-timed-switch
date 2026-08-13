@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.util import dt as dt_util
 
 from .const import (
     AVAIL_AVAILABLE,
@@ -109,7 +110,11 @@ class TimedStateSwitch(_BaseControllerSwitch):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         next_schedule = self._controller.next_schedule
-        return {ATTR_NEXT_SCHEDULE: next_schedule.isoformat() if next_schedule else None}
+        # SPEC.md B2.3/#10: explicit "yyyy.mm.dd. óó:pp:ss" formátum kérve — mivel ez sima
+        # attribútum (nem device_class:timestamp sensor), a HA frontend nem formázná szépen
+        # magától, ezért itt, kézzel formázzuk, helyi időzónára konvertálva.
+        formatted = dt_util.as_local(next_schedule).strftime("%Y.%m.%d. %H:%M:%S") if next_schedule else None
+        return {ATTR_NEXT_SCHEDULE: formatted}
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._controller.async_toggle_timed_state(True)

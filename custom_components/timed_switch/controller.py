@@ -127,7 +127,11 @@ class Controller:
 
     async def async_setup(self) -> None:
         now = dt_util.utcnow()
-        sched = evaluate_schedule(self.on_crons, self.off_crons, now)
+        # A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában kell kiértékelni (a
+        # felhasználó "0 8 * * *"-t helyi 8:00-ra ír, nem UTC-re) — ezért itt szándékosan
+        # dt_util.now() (local), NEM dt_util.utcnow(). Minden más (perzisztált abszolút
+        # időpontok, since/device_last_changed) továbbra is UTC-ben marad.
+        sched = evaluate_schedule(self.on_crons, self.off_crons, dt_util.now())
         self.timed_state = sched.timed_state if sched.timed_state is not None else self.default_state
         self.next_schedule = sched.next_schedule
 
@@ -398,8 +402,8 @@ class Controller:
             # ami hamis schedule_on/off eseményt generált minden tick-nél.
             self.next_schedule = None
             return
-        now = dt_util.utcnow()
-        sched = evaluate_schedule(self.on_crons, self.off_crons, now)
+        # ld. async_setup megjegyzését: a cron-kiértékelés helyi időben fut, nem UTC-ben.
+        sched = evaluate_schedule(self.on_crons, self.off_crons, dt_util.now())
         self.next_schedule = sched.next_schedule
         if sched.timed_state is None:
             return
