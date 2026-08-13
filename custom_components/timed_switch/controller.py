@@ -392,13 +392,20 @@ class Controller:
         self._cron_cancel = async_track_time_interval(self.hass, self._async_cron_tick, timedelta(seconds=60))
 
     async def _async_cron_tick(self, _now) -> None:
+        if not self.on_crons and not self.off_crons:
+            # SPEC.md B2.4: üres lista → nincs időzítés, timed_state sosem változik.
+            # Korábbi hiba volt: ilyenkor default_state-re "korrigáltuk" volna vissza,
+            # ami hamis schedule_on/off eseményt generált minden tick-nél.
+            self.next_schedule = None
+            return
         now = dt_util.utcnow()
         sched = evaluate_schedule(self.on_crons, self.off_crons, now)
         self.next_schedule = sched.next_schedule
-        new_value = sched.timed_state if sched.timed_state is not None else self.default_state
-        if new_value != self.timed_state:
+        if sched.timed_state is None:
+            return
+        if sched.timed_state != self.timed_state:
             self._expected_just_changed = False
-            await self.main.handle(EVT_SCHEDULE_ON if new_value else EVT_SCHEDULE_OFF, self)
+            await self.main.handle(EVT_SCHEDULE_ON if sched.timed_state else EVT_SCHEDULE_OFF, self)
             await self.async_save()
         await self._notify()
 

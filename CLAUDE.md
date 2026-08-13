@@ -118,6 +118,7 @@ elvégzi minden futtatáskor, kézzel nem kell piszkálni.
 - **Domain-döntés:** a komponens szándékosan a `timed_switch` domain-t/mappát használja, és ezzel **felülírja** a korábbi (Ansible-es, `/MyDevelopment/Ansible/MyInventory.home/roles/home-assistant/custom_components/timed_switch/`) projekt kódját, ami korábban ugyanezen a domain-en, "MyTimer" config entry néven futott ebben a HA-ban. Ez tudatos, jóváhagyott döntés (nem véletlen ütközés) — az új komponens felváltja a régit, nem mellette fut.
 - **Deploy:** `./deploy.sh` a projekt gyökeréből. Nem `rsync`/`sudo` a host-útvonalra (a `/mnt/3-Data/docker.data/home-assistant` root-tulajdonú, a fejlesztő user nincs a `root` csoportban, és a sudo jelszót igényel, nem automatizálható) — hanem a docker daemonon keresztül, `docker exec`/`docker cp`-vel, ami a konténerben **root**-ként fut, így a hívó user `docker` csoporttagsága elég, sudo nélkül. A script emeli a verziót, majd (opcionálisan, `--no-restart`-tal kihagyható) újraindítja a konténert és kiírja a friss logot.
 - **Éles teszt, nem csak elmélet:** a SPEC.md-et és a kódot ebben a környezetben, valós HA-újraindításokkal, log-alapján validáljuk — ha egy teszt vagy feltételezés téves, itt derül ki, nem a felhasználó éles rendszerén.
+- **`tests/test_transitions.py` HA/pytest nélkül fut** — ebben a fejlesztői környezetben nincs telepítve sem a `homeassistant` csomag, sem a `pytest` (ellenőrizve: `python3 -c "import homeassistant"` → `ModuleNotFoundError`). A teszt ezért `unittest`-tel (`python3 -m unittest tests.test_transitions`) fut, és a `const.py`/`state_machine.py`/`transition_table.py` modulokat közvetlenül, fájl alapján tölti be egy üres "fake" csomag alá (ld. a teszt fájl tetején lévő kommentet) — így elkerüli a `custom_components/timed_switch/__init__.py` végrehajtását, ami a `homeassistant` csomagot importálná. Ha valaha telepítve lesz a `pytest-homeassistant-custom-component`, ez a kerülőút leváltható valódi HA-fixture-alapú tesztekre.
 
 ## 11. Verifikált HA-API megjegyzések (HA 2025.9.4, ellenőrizve élőben)
 
@@ -143,3 +144,18 @@ ellenőrizve** lettek ebben a HA-verzióban (nem feltételezés), hogy legközel
   callback, timedelta)` — mindkettő szinkron, egy cancel-callable-t ad vissza.
 - `docker exec <container> whoami` → `root` ebben a HA docker image-ben — a konténerben
   minden fájlművelet root jogosultsággal fut, függetlenül a host-usertől.
+- **Entitás entity_id determinisztikus rögzítése:** minden entitás `__init__`-jében
+  közvetlenül beállítjuk `self.entity_id = f"<domain>.{slug}_{suffix}"`-t (nem bízzuk a
+  `unique_id`/`suggested_object_id`-alapú automatikus generálásra) — így garantált, hogy az
+  entity_id pontosan a SPEC.md B2.3 szótárában rögzített alakot ölti, ütközés/számozás
+  (`_2` végződés) nélkül. A `slug` forrása: `slugify(entry.title)` (`homeassistant.util.slugify`),
+  ez adja a SPEC.md-ben `<name>` placeholderrel jelölt részt.
+- **`__init__.py` setup-sorrend kötelező:** a `Controller` létrehozása → platformok
+  előreküldése (`async_forward_entry_setups`) → **csak ezután** `controller.async_setup()`.
+  Fordított sorrendben a `target_entity_id` (ha az a saját `switch.<slug>_virtual`) még nem
+  létező entitás lenne a Controller induló szinkronjakor, és a kezdeti service call/state
+  lookup csendben semmit sem találna.
+- **`async_remove_entry` kötelező** (`__init__.py`) a Store JSON törlésére integráció-törléskor
+  (`storage.Store(...).async_remove()`) — HA az entitás-/eszközregisztrációt automatikusan
+  takarítja config entry törléskor, a saját `.storage/timed_switch/<entry_id>/` állományt nem.
+  Lásd SPEC.md B4/16.
