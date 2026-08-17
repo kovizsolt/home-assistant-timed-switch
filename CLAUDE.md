@@ -93,6 +93,8 @@ Válaszban először **azonosítsd az érintett táblacellát** a `SPEC.md` B3 s
 │   ├── switch.py / sensor.py / number.py / binary_sensor.py
 │   ├── __init__.py
 │   ├── strings.json
+│   ├── www/
+│   │   └── timed-switch-card.js     # egy-Device/egy-kártya Lovelace kezelőfelület
 │   └── translations/
 └── tests/
     └── test_transitions.py           # a state_machine.py + transition_table.py tesztje,

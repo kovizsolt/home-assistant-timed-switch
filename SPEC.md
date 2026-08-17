@@ -163,7 +163,7 @@ Manuális beavatkozás esetén a kapcsoló egy konfigurált időtartamig ("manua
 | bemenet + kimenet | `target_entity_id` (tetszőleges domainű entity_id, pl. `switch.*`/`input_boolean.*`/`light.*`/`script.*`/`button.*`) | switch / input_boolean / light / script / button (felhasználó választása szerint) | a ténylegesen vezérelt entitás — egyszerre bemenet (manuális változás észlelése) és kimenet (domain-specifikus service call: turn_on/turn_off a switch/input_boolean/light/script domainnél, `button` domainnél mindig `press` — ld. B3.4). Kezdőértéke, ha a felhasználó nem ad meg sajátot: lásd `switch.<name>_virtual` sor. Élőben, reload nélkül átállítható más entitásra (lásd B2.4). |
 | kimenet (UI, belső alapértelmezett cél) | `switch.<name>_virtual` | switch | Valódi, a komponens által létrehozott HA switch entitás (nem csak belső objektum) — úgy viselkedik, mintha fizikai eszköz lenne: kap service call-okat, van saját state-je. Ha a beállításkor nincs külső `target_entity_id` megadva, ez a `target_entity_id` kezdőértéke, hogy a FŐ gép fizikai eszköz nélkül is teljes körűen működjön/tesztelhető legyen. |
 | bemenet + kimenet (UI) | `switch.<name>_expected` | switch | Az `expected_state`-et mutatja és kézzel is állítja. AUTO módban élőben követi a `switch.<name>_timed_state`-et; MANUAL módban a kézi beavatkozás értékén fagyva marad (lásd B1, B3.A). Kézi kapcsolása `manual_change_on`/`manual_change_off` (lásd B2.2/#3-4). Saját, komponens-implementálta entitás — nincs önhivatkozási kockázat (lásd B3.3). Attribútum: `device_available` — a `target_entity_id` ELERHETOSEGI állapotát jelzi (lásd B2.1b); ettől függetlenül a kapcsoló vezérelhetősége változatlan marad (a beépített HA `unavailable` szürkítés itt szándékosan NEM használt, mert az letiltaná a vezérlést — lásd `binary_sensor.<name>_problem` is). |
-| bemenet + kimenet (UI) | `switch.<name>_timed_state` | switch | A cron ütemterv NYERS, folyamatosan frissülő kimenete — AUTO-ban és MANUAL-ban egyaránt frissül, függetlenül a felülbírálástól. Kézi átbillentése valódi `schedule_on`/`schedule_off` eseményt vált ki (teszt célra, a tényleges cron-időpont megvárása nélkül — lásd B2.2/#1-2). Saját, komponens-implementálta entitás, nincs önhivatkozási kockázat. Attribútum: `next_schedule` (a következő cron-váltás abszolút időpontja) — **formátum: `yyyy.mm.dd. óó:pp:ss`, helyi időzónában, kézzel formázott string** (mivel ez sima attribútum, nem `device_class: timestamp` sensor, a HA frontend nem formázná automatikusan). |
+| bemenet + kimenet (UI) | `switch.<name>_timed_state` | switch | A cron ütemterv NYERS, folyamatosan frissülő kimenete — AUTO-ban és MANUAL-ban egyaránt frissül, függetlenül a felülbírálástól. Kézi átbillentése valódi `schedule_on`/`schedule_off` eseményt vált ki (teszt célra, a tényleges cron-időpont megvárása nélkül — lásd B2.2/#1-2). Saját, komponens-implementálta entitás, nincs önhivatkozási kockázat. Attribútum: `next_schedule` (a következő cron-váltás abszolút időpontja) ISO 8601 transport formátumban; a dashboard-kártya a felhasználó HA nyelv-, dátum-, idő- és időzóna-beállítása szerint formázza. |
 | bemenet + kimenet (UI) | `switch.<name>_is_manual_mode` | switch | A FŐ gép állapotát mutatja és kézzel is váltja: `is_on=True` ⇒ manuális mód (`MANUAL`), `is_on=False` ⇒ időzített mód (`AUTO`). Kézi bekapcsolása `override_set`, kikapcsolása `override_cleared` (lásd B2.2/#6, #8). Saját, komponens-implementálta entitás — nincs szüksége context-echo védelemre. |
 | bemenet + kimenet (UI) | `switch.<name>_device` | switch | A `target_entity_id` kétirányú tükre: bármelyik irányból (itt vagy közvetlenül a `target_entity_id`-n) történő váltás egyenértékű. Kézi (nem a komponens saját service call-ja miatti) váltása `manual_change_on`/`manual_change_off` eseményt vált ki, ugyanúgy mintha közvetlenül a `target_entity_id`-t kapcsolták volna át (lásd B2.2/#3-4, B3.3 kiterjesztett hatóköre). Elérhetőség: a `target_entity_id` ELERHETOSEGI állapotát tükrözi. |
 | kimenet (UI) | `binary_sensor.<name>_problem` | binary_sensor (`device_class: problem`) | ON, ha az ELERHETOSEGI gép `UNAVAILABLE` állapotban van (B2.1b) — feltűnő, alapértelmezett HA-jelzés (a legtöbb beépített kártyán/area-nézeten konfiguráció nélkül is látszik), kiegészítve a `switch.<name>_expected` `device_available` attribútumát. |
@@ -175,11 +175,58 @@ Manuális beavatkozás esetén a kapcsoló egy konfigurált időtartamig ("manua
 
 **Device-csoportosítás:** a fenti táblázat összes entitása (a `target_entity_id` kivételével, ami külső entitás) egyetlen közös HA Device alá tartozik, komponens-példányonként egy Device (azonosító: `(DOMAIN, entry_id)`). Enélkül az entitások a HA UI-n szórt, kontextus nélküli listaelemekként jelennek meg, nem egy áttekinthető eszközkártyaként — ez a felhasználói felület szempontjából ugyanolyan kötelező elem, mint bármelyik fenti sor.
 
+**Entity-category (elsődleges vs. másodlagos entitás):** a Device az összetartozást
+biztosítja, az `entity_category` pedig kizárólag a HA eszközoldalán történő helyes
+szétválogatást. Vezérlő vagy normál működési állapotot mutató entitás nem lehet
+`diagnostic`, mert akkor a HA elrejti az automatikus dashboard-ajánlásokból.
+
+- elsődleges (nincs `entity_category`) — `switch.<name>_expected`,
+  `switch.<name>_timed_state`, `switch.<name>_device`,
+  `sensor.<name>_manual_remaining`, valamint `switch.<name>_virtual`, ha létrejön;
+- `entity_category: config` — `switch.<name>_is_manual_mode`,
+  `number.<name>_manual_timeout`, `number.<name>_check_interval`;
+- `entity_category: diagnostic` — `binary_sensor.<name>_problem`,
+  `sensor.<name>_since_last_change`, `sensor.<name>_device_last_changed`.
+
+### B2.3a Dashboard-kártya
+
+Az integráció saját, egyetlen dashboard-elemként hozzáadható
+`custom:timed-switch-card` kártyát szállít. A kártya nem tartalmaz új állapotlogikát,
+hanem a B2.3 entitásainak egységes nézete és kezelőfelülete.
+
+- Kötelező konfigurációja egyetlen `entity`: a példány
+  `switch.<name>_expected` entitása.
+- A többi entitást a rögzített B2.3 entity_id-szuffixumok alapján automatikusan azonosítja;
+  ezeket a felhasználónak nem kell egyenként megadnia.
+- Egy kártya pontosan egy Timed Switch config entryt / Device-ot jelenít meg.
+- Egy vizuális blokkban mutatja legalább: fő célállapot, AUTO/MANUAL mód, nyers ütemezett
+  állapot, fizikai eszközállapot (ha értelmezett), manuális hátralévő idő, timeout,
+  ellenőrzési időköz, következő ütemezés és hibajelzés.
+- Minden vezérlés a meglévő entitások szabványos HA service call-ját használja.
+- Hiányzó vagy letiltott másodlagos entitásnál a működő részek használhatók maradnak, a
+  hiányzó adat helyén `—` jelenik meg.
+- A kártya mobilon és asztali nézetben is egyetlen reszponzív kártya marad.
+- A kártya belső megjelenítése a HA beépített `entities` kártyáját és natív entity-row
+  vezérlőit használja; saját ON/OFF gombot, number inputot, dátumformázót vagy párhuzamos
+  vizuális komponenst nem implementál. Így a kapcsolók, számmezők, tipográfia, térközök,
+  témák és timestamp-formátumok a HA többi komponensével azonosak.
+  A timestamp sorok rövid, numerikus `datetime/short` megjelenítést használnak, nem
+  hosszú, hónapnevet kiíró szöveges dátumot.
+  A Sections grid számára csak az oszlopszélességet adja meg; fix `rows`/`min_rows`
+  magasságot nem állít be, ezért a kártya a teljes entitáslistához igazodik, nem vágja le
+  és nem teszi belsőleg görgethetővé a tartalmat.
+- A JavaScript-modult az integráció saját statikus URL-en szolgálja ki és verziózott
+  Lovelace resource-ként automatikusan regisztrálja; kézi fájlmásolás/resource-felvétel
+  nem kell, és integrációfrissítéskor a böngésző nem tarthatja meg a régi kártyakódot.
+- A kártya regisztrálja magát a HA kártyaválasztójában (`window.customCards`), és HA
+  2026.6+-on `getEntitySuggestion` segítségével a Timed Switch fő entitásához ajánlja fel
+  magát. Így UI-ból, YAML írása nélkül, egyetlen kártyaként adható a dashboardhoz.
+
 ### B2.4 Időzítők / paraméterek
 
 | Név | Érték | Jelentés |
 |---|---|---|
-| `on_crons` / `off_crons` | felhasználó adja meg — cron-szerű kifejezések listája, soronként vagy vesszővel elválasztva, `#` a komment, `croniter` szintaxis, perc-pontosság | Külön ON és OFF cron-lista (nem egy kombinált tábla). **Élőben (reload nélkül) szerkeszthető** az options flow-n keresztül — a módosítás azonnal, integráció-újraindítás nélkül érvénybe lép és újraszámolja a `timed_state`-et/`next_schedule`-t. Ha mindkét lista üres: nincs időzítés — `timed_state` sosem változik (a `default_state` értéken marad), `next_schedule` értelmezhetetlen (`—`). A cron-kiértékelés (annak eldöntése, hogy `timed_state`-nek változnia kell-e) **fix 60 másodpercenként** fut, függetlenül a `check_interval`-tól — ez utóbbi kizárólag a device-szinkron pollerre (`state_check`) vonatkozik, a kettő nincs összekötve. **A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában értelmezzük** (nem UTC-ben) — pl. `0 8 * * *` a felhasználó helyi 8:00-ját jelenti. |
+| `on_crons` / `off_crons` | felhasználó adja meg — cron-szerű kifejezések listája, soronként vagy vesszővel elválasztva, `#` a komment, `croniter` szintaxis, perc-pontosság | Külön ON és OFF cron-lista (nem egy kombinált tábla). **Élőben (reload nélkül) szerkeszthető** az options flow-n keresztül — a módosítás azonnal, integráció-újraindítás nélkül érvénybe lép és újraszámolja a `timed_state`-et/`next_schedule`-t. Ha mindkét lista üres: nincs időzítés — `timed_state` sosem változik (a `default_state` értéken marad), `next_schedule` értelmezhetetlen (`—`). A cron-kiértékelés minden perc pontos kezdetén (`second=0`) fut, ezért nem örökli a HA indulási másodpercét és nem okoz 0–59 másodperces késést. Ez független a `check_interval`-tól — utóbbi kizárólag a device-szinkron pollerre (`state_check`) vonatkozik. **A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában értelmezzük** (nem UTC-ben) — pl. `0 8 * * *` a felhasználó helyi 8:00-ját jelenti. |
 | `manual_timeout` | felhasználó adja meg (mp), alapértelmezett **600** | Mennyi ideig érvényes egy manuális felülbírálás, mielőtt automatikusan visszaáll az ütemtervre. **Speciális eset: `manual_timeout=0`** → nincs lejárati timer; a `MANUAL` állapot a következő `schedule_on`/`schedule_off` eseményig tart (lásd B3.A). Futásidőben felülbírálható a `number.<name>_manual_timeout` entitással, függetlenül a config alapértéktől. **Élő módosítás hatálya:** ha épp fut egy MANUAL visszaszámlálás, az új érték csak a KÖVETKŐ manuális belépéskor/timer-újraindításkor (B3.1/B3.A) érvényesül — a már elindított timert nem írja felül azonnal. |
 | `check_interval` | felhasználó adja meg (mp), alapértelmezett **60** | A poller (`state_check`) periódusideje. **Speciális eset: `check_interval=0`** → a poller teljesen kikapcsolva, `state_check` esemény soha nem generálódik, amíg vissza nem áll `>0` értékre. Futásidőben felülbírálható a `number.<name>_check_interval` entitással. **Élő módosítás hatálya:** ezzel szemben **azonnal** újraindítja a pollert az új intervallummal (aszimmetria a `manual_timeout` élő módosításához képest — szándékos: a poller egy önálló, folyamatos ciklus, nincs "aktuális futása", amit ne lehetne azonnal újraindítani). |
 | `default_state` | felhasználó adja meg (BE/KI) | A kapcsoló kezdő értéke, ha nincs érvényes mentett állapot és/vagy még nincs kiértékelhető ütemterv. |
@@ -301,6 +348,19 @@ A HA `button` domainnek nincs `on`/`off` állapota — csak egy "utoljára megny
 | T20 | `AUTO`, `check_interval=0` | *(idő telik, nincs esemény)* | `AUTO` (változatlan) | `state_check` esemény **soha nem** generálódik, amíg `check_interval` vissza nem áll `>0`-ra — a poller ki van kapcsolva |
 | T21 | `AUTO` (expected_state=BE); `target_entity_id` `unavailable` volt, most visszatér `off` állapottal | *(target_entity_id state_changed: `unavailable` → `off`)* | `AUTO` (változatlan, NEM `MANUAL`) | a state_changed **nem** generál `manual_change_on/off` eseményt (kizárva, lásd B2.2/#3-4); csak device_state / `sensor.<name>_device_last_changed` frissül; a fizikai eltérést (`off` vs. `expected_state`=BE) a következő `state_check` javítja ki |
 | T22 | `MANUAL` (manual_timeout>0); `target_entity_id` `unavailable` volt, most visszatér egy tetszőleges állapottal | *(target_entity_id state_changed: `unavailable` → `on`/`off`)* | `MANUAL` (változatlan) | nincs `manual_change_on/off`, nincs timer-újraindítás, nincs service call — a poller MANUAL alatt amúgy sem nyúlna hozzá (B3.B) |
+
+### Device- és dashboard-kártya elfogadási tesztek
+
+| # | Kiindulás / művelet | Elvárás |
+|---|---|---|
+| UI1 | Egy Timed Switch config entry betöltődik | Pontosan egy HA Device jön létre `(DOMAIN, entry_id)` azonosítóval, és a B2.3 összes saját entitása ehhez tartozik. |
+| UI2 | A felhasználó a kártyaválasztóban kiválasztja a `switch.<name>_expected` entitást | A Timed Switch Card ajánlásként megjelenik, és egyetlen kártyaként hozzáadható. |
+| UI3 | A kártya csak az `entity: switch.<name>_expected` konfigurációval betöltődik | Automatikusan megtalálja ugyanazon példány kapcsolóit, number- és sensor-entitásait. |
+| UI4 | A kártyán kapcsolót vagy number értéket módosítanak | A megfelelő szabványos HA service call fut; az eredmény azonos az entitás saját More info felületével. |
+| UI5 | A Controller entitásállapotot frissít | A kártya újratöltés nélkül mutatja az új állapotokat, időpontokat és hibajelzést. |
+| UI6 | Egy másodlagos entitás hiányzik, letiltott vagy `unavailable` | A kártya nem omlik össze; a többi vezérlő működik, a hiányzó érték `—`. |
+| UI7 | A dashboard keskeny mobilnézetre vált | A vezérlők vízszintes görgetés nélkül, ugyanazon egy kártyán maradnak használhatók. |
+| UI8 | A HA/integráció frissen települ vagy frissül | A kártya resource automatikusan elérhető; nem kell fájlt másolni vagy resource-t kézzel felvenni. |
 
 **Negatív tesztek** (illegális/no-op esemény adott állapotban → nem történhet felesleges akció):
 

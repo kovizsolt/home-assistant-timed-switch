@@ -8,6 +8,9 @@ from __future__ import annotations
 
 DOMAIN = "timed_switch"
 
+CARD_URL = "/timed_switch/timed-switch-card.js"
+CARD_FILENAME = "timed-switch-card.js"
+
 PLATFORMS = ["switch", "sensor", "number", "binary_sensor"]
 
 SUPPORTED_TARGET_DOMAINS = ["switch", "input_boolean", "light", "script", "button"]

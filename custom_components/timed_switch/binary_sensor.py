@@ -10,7 +10,7 @@ from homeassistant.components.binary_sensor import BinarySensorDeviceClass, Bina
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import AVAIL_UNAVAILABLE, DOMAIN, SUFFIX_PROBLEM
 from .controller import Controller
@@ -30,6 +30,7 @@ class ProblemBinarySensor(BinarySensorEntity):
     _attr_should_poll = False
     _attr_has_entity_name = False
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
         self._controller = controller

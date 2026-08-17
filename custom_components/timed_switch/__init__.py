@@ -11,9 +11,16 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.components.lovelace.const import LOVELACE_DATA
+from homeassistant.components.lovelace.resources import ResourceStorageCollection
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.loader import async_get_integration
 from homeassistant.util import slugify
 
 from homeassistant.helpers import storage
@@ -23,8 +30,20 @@ from .const import (
     CONF_MANUAL_TIMEOUT,
     CONF_OFF_CRONS,
     CONF_ON_CRONS,
+    CARD_FILENAME,
+    CARD_URL,
     DOMAIN,
     PLATFORMS,
+    SUFFIX_CHECK_INTERVAL,
+    SUFFIX_DEVICE,
+    SUFFIX_DEVICE_LAST_CHANGED,
+    SUFFIX_EXPECTED,
+    SUFFIX_IS_MANUAL_MODE,
+    SUFFIX_MANUAL_REMAINING,
+    SUFFIX_MANUAL_TIMEOUT,
+    SUFFIX_PROBLEM,
+    SUFFIX_SINCE_LAST_CHANGE,
+    SUFFIX_TIMED_STATE,
     STORE_KEY,
     STORE_VERSION,
 )
@@ -35,6 +54,31 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    card_path = Path(__file__).parent / "www" / CARD_FILENAME
+    integration = await async_get_integration(hass, DOMAIN)
+    card_version = integration.version
+    card_resource_url = f"{CARD_URL}?v={card_version}"
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(card_path), False)]
+    )
+    resources = hass.data[LOVELACE_DATA].resources
+    if isinstance(resources, ResourceStorageCollection):
+        await resources.async_get_info()
+        existing = next(
+            (item for item in resources.async_items() if item.get("url", "").split("?", 1)[0] == CARD_URL),
+            None,
+        )
+        if existing is None:
+            await resources.async_create_item({"res_type": "module", "url": card_resource_url})
+        elif existing.get("url") != card_resource_url:
+            await resources.async_update_item(
+                existing["id"], {"res_type": "module", "url": card_resource_url}
+            )
+    else:
+        _LOGGER.warning(
+            "Lovelace YAML resource mode is active; add %s as a module resource",
+            CARD_URL,
+        )
     hass.data.setdefault(DOMAIN, {})
     return True
 
@@ -43,10 +87,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
 
     slug = slugify(entry.title)
+    device_registry = dr.async_get(hass)
+    device = device_registry.async_get_or_create(
+        config_entry_id=entry.entry_id,
+        identifiers={(DOMAIN, entry.entry_id)},
+        name=entry.title,
+        manufacturer="Timed Switch",
+        model="Scheduled entity controller",
+    )
+    if device.manufacturer != "Timed Switch" or device.model != "Scheduled entity controller":
+        device_registry.async_update_device(
+            device.id,
+            manufacturer="Timed Switch",
+            model="Scheduled entity controller",
+        )
     controller = Controller(hass, entry, slug)
     hass.data[DOMAIN][entry.entry_id] = {"controller": controller, "slug": slug}
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _migrate_entity_categories(hass, slug)
 
     # a target_entity_id (pl. a saját switch.<slug>_virtual) ekkorra már regisztrált entitás
     await controller.async_setup()
@@ -62,6 +121,30 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entry.async_on_unload(entry.add_update_listener(_update_listener))
     return True
+
+
+def _migrate_entity_categories(hass: HomeAssistant, slug: str) -> None:
+    """Keep existing registry entries aligned with SPEC.md B2.3.
+
+    Home Assistant preserves a previously registered category when an integration later
+    changes it. Explicit migration is therefore required for already installed entries.
+    """
+    registry = er.async_get(hass)
+    categories = {
+        f"switch.{slug}_{SUFFIX_EXPECTED}": None,
+        f"switch.{slug}_{SUFFIX_TIMED_STATE}": None,
+        f"switch.{slug}_{SUFFIX_DEVICE}": None,
+        f"sensor.{slug}_{SUFFIX_MANUAL_REMAINING}": None,
+        f"switch.{slug}_{SUFFIX_IS_MANUAL_MODE}": EntityCategory.CONFIG,
+        f"number.{slug}_{SUFFIX_MANUAL_TIMEOUT}": EntityCategory.CONFIG,
+        f"number.{slug}_{SUFFIX_CHECK_INTERVAL}": EntityCategory.CONFIG,
+        f"binary_sensor.{slug}_{SUFFIX_PROBLEM}": EntityCategory.DIAGNOSTIC,
+        f"sensor.{slug}_{SUFFIX_SINCE_LAST_CHANGE}": EntityCategory.DIAGNOSTIC,
+        f"sensor.{slug}_{SUFFIX_DEVICE_LAST_CHANGED}": EntityCategory.DIAGNOSTIC,
+    }
+    for entity_id, category in categories.items():
+        if (entry := registry.async_get(entity_id)) is not None and entry.entity_category != category:
+            registry.async_update_entity(entity_id, entity_category=category)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

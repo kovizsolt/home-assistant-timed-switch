@@ -11,8 +11,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.util import dt as dt_util
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import (
     AVAIL_AVAILABLE,
@@ -110,11 +109,9 @@ class TimedStateSwitch(_BaseControllerSwitch):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         next_schedule = self._controller.next_schedule
-        # SPEC.md B2.3/#10: explicit "yyyy.mm.dd. óó:pp:ss" formátum kérve — mivel ez sima
-        # attribútum (nem device_class:timestamp sensor), a HA frontend nem formázná szépen
-        # magától, ezért itt, kézzel formázzuk, helyi időzónára konvertálva.
-        formatted = dt_util.as_local(next_schedule).strftime("%Y.%m.%d. %H:%M:%S") if next_schedule else None
-        return {ATTR_NEXT_SCHEDULE: formatted}
+        # ISO marad a transport formátum; a dashboard-kártya a felhasználó HA locale-,
+        # dátum-, idő- és időzóna-beállítása szerint jeleníti meg.
+        return {ATTR_NEXT_SCHEDULE: next_schedule.isoformat() if next_schedule else None}
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._controller.async_toggle_timed_state(True)
@@ -125,6 +122,8 @@ class TimedStateSwitch(_BaseControllerSwitch):
 
 class IsManualModeSwitch(_BaseControllerSwitch):
     """switch.<slug>_is_manual_mode — SPEC.md B2.3."""
+
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_IS_MANUAL_MODE, "Manual Mode")

@@ -22,6 +22,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_state_change_event,
+    async_track_time_change,
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
@@ -393,7 +394,11 @@ class Controller:
     def _start_cron_ticker(self) -> None:
         if self._cron_cancel:
             self._cron_cancel()
-        self._cron_cancel = async_track_time_interval(self.hass, self._async_cron_tick, timedelta(seconds=60))
+        # A cron szintaxisa perc-pontosságú, ezért minden perc pontos kezdetén értékelünk.
+        # Az interval tracker a HA indulási másodpercéhez igazodna, és 0–59 s késést okozna.
+        self._cron_cancel = async_track_time_change(
+            self.hass, self._async_cron_tick, second=0
+        )
 
     async def _async_cron_tick(self, _now) -> None:
         if not self.on_crons and not self.off_crons:

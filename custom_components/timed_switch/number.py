@@ -10,7 +10,7 @@ from homeassistant.components.number import NumberEntity, NumberMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import DOMAIN, SUFFIX_CHECK_INTERVAL, SUFFIX_MANUAL_TIMEOUT
 from .controller import Controller
@@ -62,6 +62,7 @@ class ManualTimeoutNumber(_BaseNumber):
     """number.<slug>_manual_timeout — SPEC.md B2.3/B2.4."""
 
     _attr_icon = "mdi:timer-cog"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_MANUAL_TIMEOUT, "Manual Timeout")
@@ -78,6 +79,7 @@ class CheckIntervalNumber(_BaseNumber):
     """number.<slug>_check_interval — SPEC.md B2.3/B2.4 (0 = poller kikapcsolva)."""
 
     _attr_icon = "mdi:timer-refresh"
+    _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_CHECK_INTERVAL, "Check Interval")

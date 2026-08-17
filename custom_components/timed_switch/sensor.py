@@ -13,7 +13,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
 from .const import (
     DOMAIN,
@@ -66,7 +66,6 @@ class ManualRemainingSensor(_BaseSensor):
     """sensor.<slug>_manual_remaining — élő visszaszámláló, óó:pp:ss (SPEC.md B2.3)."""
 
     _attr_icon = "mdi:timer-sand"
-
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_MANUAL_REMAINING, "Manual Remaining")
 
@@ -86,6 +85,7 @@ class SinceLastChangeSensor(_BaseSensor):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:history"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_SINCE_LAST_CHANGE, "Since Last Change")
@@ -101,6 +101,7 @@ class DeviceLastChangedSensor(_BaseSensor):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:history"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_DEVICE_LAST_CHANGED, "Device Last Changed")
