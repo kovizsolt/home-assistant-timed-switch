@@ -1,7 +1,43 @@
 const EXPECTED_SUFFIX = "_expected";
 
 class TimedSwitchCard extends HTMLElement {
-  static getStubConfig() { return { entity: "" }; }
+  static getStubConfig(hass, entities = [], entitiesFill = []) {
+    const suggested = [...entities, ...entitiesFill]
+      .find((entityId) => TimedSwitchCard._isExpectedEntity(hass, entityId));
+    const firstAvailable = Object.keys(hass?.states || {})
+      .find((entityId) => TimedSwitchCard._isExpectedEntity(hass, entityId));
+    return { entity: suggested || firstAvailable || "" };
+  }
+
+  static getConfigForm() {
+    return {
+      schema: [{
+        name: "entity",
+        required: true,
+        selector: {
+          entity: {
+            filter: { domain: "switch", integration: "timed_switch" },
+          },
+        },
+      }],
+      computeLabel: (schema) => schema.name === "entity" ? "Timed Switch instance (Expected)" : undefined,
+      computeHelper: (schema) => schema.name === "entity"
+        ? "Select the Expected switch of the Timed Switch device."
+        : undefined,
+      assertConfig: (config) => {
+        if (!config.entity?.startsWith("switch.") || !config.entity.endsWith(EXPECTED_SUFFIX)) {
+          throw new Error("Select the Expected switch of a Timed Switch device");
+        }
+      },
+    };
+  }
+
+  static _isExpectedEntity(hass, entityId) {
+    const state = hass?.states?.[entityId];
+    return entityId?.startsWith("switch.")
+      && entityId.endsWith(EXPECTED_SUFFIX)
+      && state?.attributes?.device_available !== undefined;
+  }
 
   setConfig(config) {
     if (!config.entity || !config.entity.startsWith("switch.") || !config.entity.endsWith(EXPECTED_SUFFIX)) {
@@ -111,8 +147,7 @@ if (!window.customCards.some((card) => card.type === "timed-switch-card")) {
     description: "Native Home Assistant controls for one Timed Switch device",
     preview: true,
     getEntitySuggestion: (hass, entityId) => {
-      const state = hass.states[entityId];
-      if (!entityId.startsWith("switch.") || !entityId.endsWith(EXPECTED_SUFFIX) || state?.attributes?.device_available === undefined) return null;
+      if (!TimedSwitchCard._isExpectedEntity(hass, entityId)) return null;
       return { config: { type: "custom:timed-switch-card", entity: entityId } };
     },
   });

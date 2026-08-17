@@ -361,6 +361,7 @@ A HA `button` domainnek nincs `on`/`off` állapota — csak egy "utoljára megny
 | UI6 | Egy másodlagos entitás hiányzik, letiltott vagy `unavailable` | A kártya nem omlik össze; a többi vezérlő működik, a hiányzó érték `—`. |
 | UI7 | A dashboard keskeny mobilnézetre vált | A vezérlők vízszintes görgetés nélkül, ugyanazon egy kártyán maradnak használhatók. |
 | UI8 | A HA/integráció frissen települ vagy frissül | A kártya resource automatikusan elérhető; nem kell fájlt másolni vagy resource-t kézzel felvenni. |
+| UI9 | A felhasználó kód nélkül ad hozzá kártyát | Entitás alapján minden Timed Switch példány `Expected` kapcsolója felajánlja a komplett Timed Switch Cardot; közvetlen kártyaválasztáskor grafikus, az integráció kapcsolóira szűrt entitásválasztó jelenik meg, és az első elérhető példány az alapértelmezett. |
 
 **Negatív tesztek** (illegális/no-op esemény adott állapotban → nem történhet felesleges akció):
 

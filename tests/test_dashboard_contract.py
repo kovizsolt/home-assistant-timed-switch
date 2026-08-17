@@ -48,6 +48,13 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn("getEntitySuggestion", card)
         self.assertIn('type: "timed-switch-card"', card)
 
+    def test_UI4b_card_has_a_filtered_graphical_editor(self):
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
+        self.assertIn("static getConfigForm()", card)
+        self.assertIn('filter: { domain: "switch", integration: "timed_switch" }', card)
+        self.assertIn("static getStubConfig(hass, entities = [], entitiesFill = [])", card)
+        self.assertIn("TimedSwitchCard._isExpectedEntity", card)
+
     def test_UI5_controls_use_native_home_assistant_entity_rows(self):
         card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
         self.assertIn("window.loadCardHelpers", card)
