@@ -13,10 +13,28 @@
           "default_state": "Alapértelmezett állapot (BE)",
           "notify_events": "Értesítések küldése"
         }
+      },
+      "target": {
+        "title": "Select target switch",
+        "menu_options": {
+          "built_in_virtual": "Built-in virtual switch",
+          "existing_entity": "Existing entity",
+          "new_virtual_switch": "New Virtual Switch"
+        }
+      },
+      "existing_entity": {
+        "title": "Existing target entity",
+        "data": {"target_entity_id": "Controlled entity"}
+      },
+      "new_virtual_switch": {
+        "title": "Create a new Virtual Switch",
+        "data": {"name": "Virtual Switch name"}
       }
     },
     "error": {
-      "name_required": "A név megadása kötelező"
+      "name_required": "Name is required",
+      "virtual_switch_create_failed": "Could not create the Virtual Switch",
+      "virtual_switch_already_exists": "A Virtual Switch with this name already exists; select it as an existing entity"
     }
   },
   "options": {

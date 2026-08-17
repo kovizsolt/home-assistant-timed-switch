@@ -232,6 +232,37 @@ hanem a B2.3 entitásainak egységes nézete és kezelőfelülete.
 | `default_state` | felhasználó adja meg (BE/KI) | A kapcsoló kezdő értéke, ha nincs érvényes mentett állapot és/vagy még nincs kiértékelhető ütemterv. |
 | `notify_events` | felhasználó adja meg (bool), alapértelmezett **false** | Ha igaz, HA `persistent_notification` jön létre ütemezett célváltáskor és enforce-akciónál — lásd B4/10. |
 
+### B2.4a Célkapcsoló kiválasztása a config flow-ban
+
+A Timed Switch létrehozása teljesen UI-vezérelt, és a cél kiválasztása külön lépésben
+történik. A meglévő állapotgép és a `target_entity_id` jelentése nem változik; kizárólag
+annak UI-beli meghatározási módja bővül.
+
+| Választás | Elérhetőség | Eredmény |
+|---|---|---|
+| `built_in_virtual` | mindig | A jelenlegi `switch.<name>_virtual` jön létre és lesz a `target_entity_id`. Ez a jelenlegi alapértelmezett működés változatlanul megmarad. |
+| `existing_entity` | mindig | A felhasználó a támogatott domainek meglévő entitásai közül választ; meglévő Virtual Switch esetén annak `switch.<virtual_name>_main` entitását választja. |
+| `new_virtual_switch` | csak akkor, ha a `virtual_switch` integráció telepítve és betölthető | A UI új Virtual Switch létrehozását indítja, majd annak `switch.<virtual_name>_main` entitása lesz a `target_entity_id`. |
+
+További kötelező szabályok:
+
+- A Virtual Switch opcionális együttműködés: hiánya nem akadályozhatja a Timed Switch
+  telepítését, betöltését, frissítését vagy meglévő config entryinek működését.
+- Ha a `virtual_switch` nincs jelen, a `new_virtual_switch` választás nem jelenik meg; nem
+  jelenhet meg működésképtelen menüpont.
+- Az `existing_entity` selector a támogatott domaineket továbbra is felajánlja. Ha a
+  Virtual Switch jelen van, annak `*_main` kapcsolói normál `switch` célként választhatók.
+- Új Virtual Switch létrehozását a `virtual_switch` saját config flow-ja végzi. A
+  TimedSwitch nem másolja és nem birtokolja annak állapotgépét.
+- A létrehozott Virtual Switch önálló config entry és Device marad. Törlése, átnevezése és
+  állapot-perzisztenciája a `virtual_switch` integráció felelőssége.
+- A TimedSwitch a kapcsolódás után kizárólag szabványos HA switch service callokon és
+  state change eseményeken keresztül használja a Virtual Switch `main` entitását, ugyanúgy,
+  mint bármely más külső `switch` célt.
+- Ha az új Virtual Switch létrehozását a felhasználó megszakítja vagy az sikertelen, a
+  Timed Switch config flow visszatér a célválasztáshoz, és nem hoz létre félkész entryt.
+- Timed Switch törlése nem törölheti a hozzá kapcsolt Virtual Switch entryt vagy Device-ot.
+
 ## B3. Átmeneti tábla
 
 > **MINDEN cella kötelező.** Ahol nincs teendő, írd: `— (ignore)`. Formátum egy cellában: `CÉLÁLLAPOT [guard] → akció`
@@ -362,6 +393,12 @@ A HA `button` domainnek nincs `on`/`off` állapota — csak egy "utoljára megny
 | UI7 | A dashboard keskeny mobilnézetre vált | A vezérlők vízszintes görgetés nélkül, ugyanazon egy kártyán maradnak használhatók. |
 | UI8 | A HA/integráció frissen települ vagy frissül | A kártya resource automatikusan elérhető; nem kell fájlt másolni vagy resource-t kézzel felvenni. |
 | UI9 | A felhasználó kód nélkül ad hozzá kártyát | Entitás alapján minden Timed Switch példány `Expected` kapcsolója felajánlja a komplett Timed Switch Cardot; közvetlen kártyaválasztáskor grafikus, az integráció kapcsolóira szűrt entitásválasztó jelenik meg, és az első elérhető példány az alapértelmezett. |
+| UI10 | Új Timed Switch létrehozása, Virtual Switch nincs telepítve | A célválasztóban a jelenlegi beépített virtuális cél és a meglévő entitás választása látható; Virtual Switch létrehozási lehetőség nincs. |
+| UI11 | Új Timed Switch létrehozása, Virtual Switch telepítve | A célválasztó a `built_in_virtual`, `existing_entity` és `new_virtual_switch` lehetőséget is felajánlja. |
+| UI12 | `existing_entity` kiválasztása után egy meglévő `switch.<virtual_name>_main` kerül kiválasztásra | Ez lesz a `target_entity_id`; a Timed Switch külső switchként, a meglévő állapotgép módosítása nélkül vezérli. |
+| UI13 | `new_virtual_switch` kiválasztása és a Virtual Switch config flow sikeres befejezése | Létrejön az önálló Virtual Switch entry/Device, és annak `*_main` entitása lesz az új Timed Switch `target_entity_id` értéke. |
+| UI14 | A felhasználó megszakítja az új Virtual Switch létrehozását | Nem jön létre félkész Timed Switch; a flow visszatér a célválasztáshoz. |
+| UI15 | Egy Virtual Switchhez kapcsolt Timed Switch entryt törölnek | A Virtual Switch entry és Device megmarad. |
 
 **Negatív tesztek** (illegális/no-op esemény adott állapotban → nem történhet felesleges akció):
 

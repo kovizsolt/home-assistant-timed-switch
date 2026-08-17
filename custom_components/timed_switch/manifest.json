@@ -1,7 +1,7 @@
 {
   "domain": "timed_switch",
   "name": "Timed Switch",
-  "version": "0.1.0022",
+  "version": "0.1.0024",
   "documentation": "https://example.local/timed_switch",
   "issue_tracker": "https://example.local/timed_switch/issues",
   "codeowners": [

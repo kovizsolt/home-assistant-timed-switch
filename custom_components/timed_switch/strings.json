@@ -13,10 +13,28 @@
           "default_state": "Alapértelmezett állapot (BE)",
           "notify_events": "Értesítések küldése"
         }
+      },
+      "target": {
+        "title": "Célkapcsoló kiválasztása",
+        "menu_options": {
+          "built_in_virtual": "Beépített virtuális kapcsoló",
+          "existing_entity": "Meglévő entitás",
+          "new_virtual_switch": "Új Virtual Switch"
+        }
+      },
+      "existing_entity": {
+        "title": "Meglévő célentitás",
+        "data": {"target_entity_id": "Vezérelt entitás"}
+      },
+      "new_virtual_switch": {
+        "title": "Új Virtual Switch létrehozása",
+        "data": {"name": "Virtual Switch neve"}
       }
     },
     "error": {
-      "name_required": "A név megadása kötelező"
+      "name_required": "A név megadása kötelező",
+      "virtual_switch_create_failed": "A Virtual Switch létrehozása sikertelen",
+      "virtual_switch_already_exists": "Már létezik ilyen nevű Virtual Switch; válaszd a meglévő entitás lehetőséget"
     }
   },
   "options": {
