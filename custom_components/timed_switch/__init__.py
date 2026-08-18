@@ -5,7 +5,7 @@
 # indítása (ebben a sorrendben, hogy a target_entity_id — akár a saját switch.<slug>_virtual
 # is — már létező entitás legyen, mire a Controller az induló szinkront elvégzi).
 #
-# SPEC.md B2.4: on_crons/off_crons/manual_timeout/check_interval élőben szerkeszthető —
+# SPEC.md B2.4: on_crons/off_crons/manual_timeout/sync_interval élőben szerkeszthető —
 # ezért az options-update listener NEM reload-ol, hanem közvetlenül frissíti a Controllert.
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
@@ -26,20 +26,22 @@ from homeassistant.util import slugify
 from homeassistant.helpers import storage
 
 from .const import (
-    CONF_CHECK_INTERVAL,
+    CONF_SYNC_INTERVAL,
     CONF_MANUAL_TIMEOUT,
     CONF_OFF_CRONS,
     CONF_ON_CRONS,
     CARD_FILENAME,
     CARD_URL,
     DOMAIN,
+    LEGACY_CONF_CHECK_INTERVAL,
     PLATFORMS,
-    SUFFIX_CHECK_INTERVAL,
+    SUFFIX_SYNC_INTERVAL,
     SUFFIX_DEVICE,
     SUFFIX_DEVICE_LAST_CHANGED,
     SUFFIX_EXPECTED,
     SUFFIX_IS_MANUAL_MODE,
     SUFFIX_MANUAL_REMAINING,
+    SUFFIX_SYNC_REMAINING,
     SUFFIX_MANUAL_TIMEOUT,
     SUFFIX_PROBLEM,
     SUFFIX_SINCE_LAST_CHANGE,
@@ -104,6 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     controller = Controller(hass, entry, slug)
     hass.data[DOMAIN][entry.entry_id] = {"controller": controller, "slug": slug}
 
+    _migrate_sync_interval_entity(hass, entry.entry_id, slug)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _migrate_entity_categories(hass, slug)
 
@@ -111,12 +114,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await controller.async_setup()
 
     async def _update_listener(hass: HomeAssistant, updated_entry: ConfigEntry) -> None:
-        """SPEC.md B2.4: cron-listák/manual_timeout/check_interval élőben, reload nélkül."""
+        """SPEC.md B2.4: cron-listák/manual_timeout/sync_interval élőben, reload nélkül."""
         data = {**updated_entry.data, **(updated_entry.options or {})}
         controller.on_crons = parse_cron_list(data.get(CONF_ON_CRONS, ""))
         controller.off_crons = parse_cron_list(data.get(CONF_OFF_CRONS, ""))
         await controller.async_set_manual_timeout(int(data.get(CONF_MANUAL_TIMEOUT, controller.manual_timeout)))
-        await controller.async_set_check_interval(int(data.get(CONF_CHECK_INTERVAL, controller.check_interval)))
+        await controller.async_set_sync_interval(
+            int(data.get(CONF_SYNC_INTERVAL, data.get(LEGACY_CONF_CHECK_INTERVAL, controller.sync_interval)))
+        )
         _LOGGER.info("[%s] beállítások frissítve, élőben (reload nélkül)", controller.name)
 
     entry.async_on_unload(entry.add_update_listener(_update_listener))
@@ -135,9 +140,10 @@ def _migrate_entity_categories(hass: HomeAssistant, slug: str) -> None:
         f"switch.{slug}_{SUFFIX_TIMED_STATE}": None,
         f"switch.{slug}_{SUFFIX_DEVICE}": None,
         f"sensor.{slug}_{SUFFIX_MANUAL_REMAINING}": None,
+        f"sensor.{slug}_{SUFFIX_SYNC_REMAINING}": None,
         f"switch.{slug}_{SUFFIX_IS_MANUAL_MODE}": EntityCategory.CONFIG,
         f"number.{slug}_{SUFFIX_MANUAL_TIMEOUT}": EntityCategory.CONFIG,
-        f"number.{slug}_{SUFFIX_CHECK_INTERVAL}": EntityCategory.CONFIG,
+        f"number.{slug}_{SUFFIX_SYNC_INTERVAL}": EntityCategory.CONFIG,
         f"binary_sensor.{slug}_{SUFFIX_PROBLEM}": EntityCategory.DIAGNOSTIC,
         f"sensor.{slug}_{SUFFIX_SINCE_LAST_CHANGE}": EntityCategory.DIAGNOSTIC,
         f"sensor.{slug}_{SUFFIX_DEVICE_LAST_CHANGED}": EntityCategory.DIAGNOSTIC,
@@ -145,6 +151,20 @@ def _migrate_entity_categories(hass: HomeAssistant, slug: str) -> None:
     for entity_id, category in categories.items():
         if (entry := registry.async_get(entity_id)) is not None and entry.entity_category != category:
             registry.async_update_entity(entity_id, entity_category=category)
+
+
+def _migrate_sync_interval_entity(hass: HomeAssistant, entry_id: str, slug: str) -> None:
+    """Rename the former Check Interval registry entry without creating a duplicate."""
+    registry = er.async_get(hass)
+    old_unique_id = f"{entry_id}_check_interval"
+    old_entity_id = registry.async_get_entity_id("number", DOMAIN, old_unique_id)
+    new_entity_id = f"number.{slug}_{SUFFIX_SYNC_INTERVAL}"
+    if old_entity_id is not None and registry.async_get(new_entity_id) is None:
+        registry.async_update_entity(
+            old_entity_id,
+            new_entity_id=new_entity_id,
+            new_unique_id=f"{entry_id}_{SUFFIX_SYNC_INTERVAL}",
+        )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

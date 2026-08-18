@@ -26,7 +26,7 @@ from .const import (
     EVT_OVERRIDE_SET,
     EVT_SCHEDULE_OFF,
     EVT_SCHEDULE_ON,
-    EVT_STATE_CHECK,
+    EVT_STATE_SYNC,
     STATE_AUTO,
     STATE_MANUAL,
 )
@@ -83,7 +83,7 @@ def build_main_table(a: MainActions) -> TransitionTable:
             EVT_OVERRIDE_SET: [
                 Transition(STATE_MANUAL, (a.noop,), label="expected_state és timed_state változatlan"),
             ],
-            EVT_STATE_CHECK: [
+            EVT_STATE_SYNC: [
                 Transition(STATE_AUTO, (a.sync_device_if_needed,)),
             ],
         },
@@ -119,7 +119,7 @@ def build_main_table(a: MainActions) -> TransitionTable:
             EVT_OVERRIDE_SET: [
                 Transition(STATE_MANUAL, (a.noop,), label="ignore, már MANUAL"),
             ],
-            EVT_STATE_CHECK: [
+            EVT_STATE_SYNC: [
                 Transition(STATE_MANUAL, (a.noop,), label="ignore, felülbírálás alatt a poller nem nyúl a kapcsolóhoz"),
             ],
         },

@@ -9,7 +9,7 @@
           "on_crons": "ON cron-lista",
           "off_crons": "OFF cron-lista",
           "manual_timeout": "Manuális timeout (mp, 0 = nincs)",
-          "check_interval": "Ellenőrzési intervallum (mp, 0 = kikapcsolva)",
+          "sync_interval": "Sync interval (seconds, 0 = disabled)",
           "default_state": "Alapértelmezett állapot (BE)",
           "notify_events": "Értesítések küldése"
         }
@@ -46,7 +46,7 @@
           "on_crons": "ON cron-lista",
           "off_crons": "OFF cron-lista",
           "manual_timeout": "Manuális timeout (mp, 0 = nincs)",
-          "check_interval": "Ellenőrzési intervallum (mp, 0 = kikapcsolva)",
+          "sync_interval": "Sync interval (seconds, 0 = disabled)",
           "default_state": "Alapértelmezett állapot (BE)",
           "notify_events": "Értesítések küldése"
         }

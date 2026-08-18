@@ -54,7 +54,7 @@ EVT_OVERRIDE_CLEARED = const.EVT_OVERRIDE_CLEARED
 EVT_OVERRIDE_SET = const.EVT_OVERRIDE_SET
 EVT_SCHEDULE_OFF = const.EVT_SCHEDULE_OFF
 EVT_SCHEDULE_ON = const.EVT_SCHEDULE_ON
-EVT_STATE_CHECK = const.EVT_STATE_CHECK
+EVT_STATE_SYNC = const.EVT_STATE_SYNC
 STATE_AUTO = const.STATE_AUTO
 STATE_MANUAL = const.STATE_MANUAL
 
@@ -224,19 +224,19 @@ class MainMachineTests(unittest.TestCase):
         self.assertTrue(f.expected_state)
         self.assertTrue(f.device_state)
 
-    def test_N1_state_check_idempotent_when_synced(self):
+    def test_N1_state_sync_idempotent_when_synced(self):
         m, f = make_main(initial_state=STATE_AUTO)
         f.expected_state = True
         f.device_state = True
-        run(m.handle(EVT_STATE_CHECK, f))
+        run(m.handle(EVT_STATE_SYNC, f))
         self.assertEqual(m.state, STATE_AUTO)
         self.assertNotIn("device_sync->True", f.calls)
 
-    def test_N2_manual_state_check_is_noop(self):
+    def test_N2_manual_state_sync_is_noop(self):
         m, f = make_main(manual_timeout=600, initial_state=STATE_MANUAL)
         f.expected_state = True
         f.device_state = False  # szándékos eltérés — a pollernek NEM szabad hozzányúlnia
-        run(m.handle(EVT_STATE_CHECK, f))
+        run(m.handle(EVT_STATE_SYNC, f))
         self.assertEqual(m.state, STATE_MANUAL)
         self.assertFalse(f.device_state)
 
@@ -286,7 +286,7 @@ class TableCompletenessTests(unittest.TestCase):
         table = build_main_table(f)
         events = [
             EVT_SCHEDULE_ON, EVT_SCHEDULE_OFF, EVT_MANUAL_CHANGE_ON, EVT_MANUAL_CHANGE_OFF,
-            EVT_MANUAL_TIMEOUT_EXPIRED, EVT_OVERRIDE_CLEARED, EVT_OVERRIDE_SET, EVT_STATE_CHECK,
+            EVT_MANUAL_TIMEOUT_EXPIRED, EVT_OVERRIDE_CLEARED, EVT_OVERRIDE_SET, EVT_STATE_SYNC,
         ]
         for state in (STATE_AUTO, STATE_MANUAL):
             for event in events:

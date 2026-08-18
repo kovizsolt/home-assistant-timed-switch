@@ -1,7 +1,8 @@
 # --------------------------------------------------------------------------------------------------
 # File          : custom_components/timed_switch/sensor.py
 #
-# SPEC.md B2.3 sensor entitások: _manual_remaining (élő óó:pp:ss), _since_last_change és
+# SPEC.md B2.3 sensor entitások: _manual_remaining, _sync_remaining (élő óó:pp:ss),
+# _since_last_change és
 # _device_last_changed (device_class: timestamp, abszolút időpont).
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
@@ -19,6 +20,7 @@ from .const import (
     DOMAIN,
     SUFFIX_DEVICE_LAST_CHANGED,
     SUFFIX_MANUAL_REMAINING,
+    SUFFIX_SYNC_REMAINING,
     SUFFIX_SINCE_LAST_CHANGE,
 )
 from .controller import Controller
@@ -32,6 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     async_add_entities(
         [
             ManualRemainingSensor(controller, slug),
+            SyncRemainingSensor(controller, slug),
             SinceLastChangeSensor(controller, slug),
             DeviceLastChangedSensor(controller, slug),
         ]
@@ -70,10 +73,28 @@ class ManualRemainingSensor(_BaseSensor):
         super().__init__(controller, slug, SUFFIX_MANUAL_REMAINING, "Manual Remaining")
 
     @property
-    def native_value(self) -> Optional[str]:
+    def native_value(self) -> str:
         remaining = self._controller.manual_remaining_seconds
         if remaining is None:
-            return None
+            return "--:--"
+        hours, rem = divmod(remaining, 3600)
+        minutes, seconds = divmod(rem, 60)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+
+class SyncRemainingSensor(_BaseSensor):
+    """sensor.<slug>_sync_remaining — a következő eszközszinkronig hátralévő idő."""
+
+    _attr_icon = "mdi:timer-sync"
+
+    def __init__(self, controller: Controller, slug: str) -> None:
+        super().__init__(controller, slug, SUFFIX_SYNC_REMAINING, "Sync Remaining")
+
+    @property
+    def native_value(self) -> str:
+        remaining = self._controller.sync_remaining_seconds
+        if remaining is None:
+            return "--:--"
         hours, rem = divmod(remaining, 3600)
         minutes, seconds = divmod(rem, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"

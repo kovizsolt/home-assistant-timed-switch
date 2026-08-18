@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------------------------------------
 # File          : custom_components/timed_switch/number.py
 #
-# SPEC.md B2.3 number entitások: _manual_timeout, _check_interval (mindkettő mp, futásidőben
+# SPEC.md B2.3 number entitások: _manual_timeout, _sync_interval (mindkettő mp, futásidőben
 # felülbírálja a config alapértéket).
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
-from .const import DOMAIN, SUFFIX_CHECK_INTERVAL, SUFFIX_MANUAL_TIMEOUT
+from .const import DOMAIN, SUFFIX_SYNC_INTERVAL, SUFFIX_MANUAL_TIMEOUT
 from .controller import Controller
 
 
@@ -24,7 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     async_add_entities(
         [
             ManualTimeoutNumber(controller, slug),
-            CheckIntervalNumber(controller, slug),
+            SyncIntervalNumber(controller, slug),
         ]
     )
 
@@ -75,21 +75,21 @@ class ManualTimeoutNumber(_BaseNumber):
         await self._controller.async_set_manual_timeout(int(value))
 
 
-class CheckIntervalNumber(_BaseNumber):
-    """number.<slug>_check_interval — SPEC.md B2.3/B2.4 (0 = poller kikapcsolva)."""
+class SyncIntervalNumber(_BaseNumber):
+    """number.<slug>_sync_interval — SPEC.md B2.3/B2.4 (0 = poller kikapcsolva)."""
 
     _attr_icon = "mdi:timer-refresh"
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_CHECK_INTERVAL, "Check Interval")
+        super().__init__(controller, slug, SUFFIX_SYNC_INTERVAL, "Sync Interval")
 
     @property
     def native_value(self) -> float:
-        return float(self._controller.check_interval)
+        return float(self._controller.sync_interval)
 
     async def async_set_native_value(self, value: float) -> None:
-        await self._controller.async_set_check_interval(int(value))
+        await self._controller.async_set_sync_interval(int(value))
 # --------------------------------------------------------------------------------------------------
 # EOF
 # --------------------------------------------------------------------------------------------------

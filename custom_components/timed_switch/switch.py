@@ -111,7 +111,7 @@ class TimedStateSwitch(_BaseControllerSwitch):
         next_schedule = self._controller.next_schedule
         # ISO marad a transport formátum; a dashboard-kártya a felhasználó HA locale-,
         # dátum-, idő- és időzóna-beállítása szerint jeleníti meg.
-        return {ATTR_NEXT_SCHEDULE: next_schedule.isoformat() if next_schedule else None}
+        return {ATTR_NEXT_SCHEDULE: next_schedule.isoformat() if next_schedule else "--"}
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         await self._controller.async_toggle_timed_state(True)

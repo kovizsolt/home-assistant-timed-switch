@@ -2,7 +2,7 @@
 # File          : custom_components/timed_switch/controller.py
 #
 # A Controller osztály: a két állapotgép (FŐ, ELERHETOSEGI) tulajdonosa, ő végzi a
-# target_entity_id I/O-t, az időzítéseket (manual_timeout, check_interval), a cron-motort
+# target_entity_id I/O-t, az időzítéseket (manual_timeout, sync_interval), a cron-motort
 # (timed_state/next_schedule), a Store-perzisztenciát (SPEC.md B3.2) és az önhivatkozás
 # elleni védelmet (SPEC.md B3.3, HA Context.id).
 #
@@ -29,14 +29,14 @@ from homeassistant.util import dt as dt_util
 
 from .const import (
     AVAIL_UNAVAILABLE,
-    CONF_CHECK_INTERVAL,
+    CONF_SYNC_INTERVAL,
     CONF_DEFAULT_STATE,
     CONF_MANUAL_TIMEOUT,
     CONF_NAME,
     CONF_OFF_CRONS,
     CONF_ON_CRONS,
     CONF_TARGET_ENTITY_ID,
-    DEFAULT_CHECK_INTERVAL,
+    DEFAULT_SYNC_INTERVAL,
     DEFAULT_DEFAULT_STATE,
     DEFAULT_MANUAL_TIMEOUT,
     DOMAIN,
@@ -49,7 +49,8 @@ from .const import (
     EVT_OVERRIDE_SET,
     EVT_SCHEDULE_OFF,
     EVT_SCHEDULE_ON,
-    EVT_STATE_CHECK,
+    EVT_STATE_SYNC,
+    LEGACY_CONF_CHECK_INTERVAL,
     SIGNAL_UPDATE,
     STATE_AUTO,
     STATE_MANUAL,
@@ -94,7 +95,9 @@ class Controller:
         self.on_crons: list[str] = parse_cron_list(data.get(CONF_ON_CRONS, ""))
         self.off_crons: list[str] = parse_cron_list(data.get(CONF_OFF_CRONS, ""))
         self.manual_timeout: int = int(data.get(CONF_MANUAL_TIMEOUT, DEFAULT_MANUAL_TIMEOUT))
-        self.check_interval: int = int(data.get(CONF_CHECK_INTERVAL, DEFAULT_CHECK_INTERVAL))
+        self.sync_interval: int = int(
+            data.get(CONF_SYNC_INTERVAL, data.get(LEGACY_CONF_CHECK_INTERVAL, DEFAULT_SYNC_INTERVAL))
+        )
         self.default_state: bool = bool(data.get(CONF_DEFAULT_STATE, DEFAULT_DEFAULT_STATE))
 
         # --- futásidejű állapot (SPEC.md B1/B2.3) ---
@@ -102,6 +105,7 @@ class Controller:
         self.timed_state: bool = self.default_state
         self.device_state: Optional[bool] = None
         self.manual_until: Optional[datetime] = None
+        self.sync_until: Optional[datetime] = None
         self.next_schedule: Optional[datetime] = None
         self.since_last_change: Optional[datetime] = None
         self.device_last_changed: Optional[datetime] = None
@@ -110,6 +114,7 @@ class Controller:
         self._last_own_context_id: Optional[str] = None
         self._manual_timer_cancel = None
         self._remaining_ticker_cancel = None
+        self._sync_ticker_cancel = None
         self._poller_cancel = None
         self._cron_cancel = None
         self._unsub_state_changed = None
@@ -182,7 +187,13 @@ class Controller:
     async def async_unload(self) -> None:
         if self._unsub_state_changed:
             self._unsub_state_changed()
-        for cancel in (self._manual_timer_cancel, self._remaining_ticker_cancel, self._poller_cancel, self._cron_cancel):
+        for cancel in (
+            self._manual_timer_cancel,
+            self._remaining_ticker_cancel,
+            self._sync_ticker_cancel,
+            self._poller_cancel,
+            self._cron_cancel,
+        ):
             if cancel:
                 cancel()
 
@@ -288,8 +299,8 @@ class Controller:
         self.manual_timeout = max(0, int(seconds))
         await self._notify()
 
-    async def async_set_check_interval(self, seconds: int) -> None:
-        self.check_interval = max(0, int(seconds))
+    async def async_set_sync_interval(self, seconds: int) -> None:
+        self.sync_interval = max(0, int(seconds))
         self._start_poller()
         await self._notify()
 
@@ -381,14 +392,23 @@ class Controller:
         if self._poller_cancel:
             self._poller_cancel()
             self._poller_cancel = None
-        if self.check_interval > 0:
+        self.sync_until = None
+        if self._sync_ticker_cancel:
+            self._sync_ticker_cancel()
+            self._sync_ticker_cancel = None
+        if self.sync_interval > 0:
+            self.sync_until = dt_util.utcnow() + timedelta(seconds=self.sync_interval)
             self._poller_cancel = async_track_time_interval(
-                self.hass, self._async_poll, timedelta(seconds=self.check_interval)
+                self.hass, self._async_poll, timedelta(seconds=self.sync_interval)
+            )
+            self._sync_ticker_cancel = async_track_time_interval(
+                self.hass, self._async_tick_remaining, timedelta(seconds=1)
             )
 
     async def _async_poll(self, _now) -> None:
+        self.sync_until = dt_util.utcnow() + timedelta(seconds=self.sync_interval)
         self._expected_just_changed = False
-        await self.main.handle(EVT_STATE_CHECK, self)
+        await self.main.handle(EVT_STATE_SYNC, self)
         await self._notify()
 
     def _start_cron_ticker(self) -> None:
@@ -467,6 +487,12 @@ class Controller:
         if self.main.state != STATE_MANUAL or self.manual_until is None:
             return None
         return max(0, int((self.manual_until - dt_util.utcnow()).total_seconds()))
+
+    @property
+    def sync_remaining_seconds(self) -> Optional[int]:
+        if self.sync_interval <= 0 or self.sync_until is None:
+            return None
+        return max(0, int((self.sync_until - dt_util.utcnow()).total_seconds()))
 
     async def _notify(self) -> None:
         # async_dispatcher_send ebben a HA verzióban @callback (szinkron), nem awaitolható.

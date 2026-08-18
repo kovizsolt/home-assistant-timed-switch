@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------------------------------------
 # File          : custom_components/timed_switch/config_flow.py
 #
-# Beállítás + Opciók flow. SPEC.md B2.4: on_crons/off_crons/manual_timeout/check_interval
+# Beállítás + Opciók flow. SPEC.md B2.4: on_crons/off_crons/manual_timeout/sync_interval
 # élőben (reload nélkül) érvényesül — ezt az __init__.py update_listenere végzi a Controlleren.
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
@@ -18,7 +18,7 @@ from homeassistant.loader import IntegrationNotFound, async_get_integration
 from homeassistant.util import slugify
 
 from .const import (
-    CONF_CHECK_INTERVAL,
+    CONF_SYNC_INTERVAL,
     CONF_DEFAULT_STATE,
     CONF_MANUAL_TIMEOUT,
     CONF_NAME,
@@ -26,11 +26,12 @@ from .const import (
     CONF_OFF_CRONS,
     CONF_ON_CRONS,
     CONF_TARGET_ENTITY_ID,
-    DEFAULT_CHECK_INTERVAL,
+    DEFAULT_SYNC_INTERVAL,
     DEFAULT_DEFAULT_STATE,
     DEFAULT_MANUAL_TIMEOUT,
     DEFAULT_NOTIFY_EVENTS,
     DOMAIN,
+    LEGACY_CONF_CHECK_INTERVAL,
     SUPPORTED_TARGET_DOMAINS,
 )
 
@@ -48,7 +49,10 @@ def _schema(defaults: dict[str, Any], include_name: bool, include_target: bool =
     base[vol.Optional(CONF_ON_CRONS, default=defaults.get(CONF_ON_CRONS, ""))] = str
     base[vol.Optional(CONF_OFF_CRONS, default=defaults.get(CONF_OFF_CRONS, ""))] = str
     base[vol.Optional(CONF_MANUAL_TIMEOUT, default=defaults.get(CONF_MANUAL_TIMEOUT, DEFAULT_MANUAL_TIMEOUT))] = int
-    base[vol.Optional(CONF_CHECK_INTERVAL, default=defaults.get(CONF_CHECK_INTERVAL, DEFAULT_CHECK_INTERVAL))] = int
+    sync_interval = defaults.get(
+        CONF_SYNC_INTERVAL, defaults.get(LEGACY_CONF_CHECK_INTERVAL, DEFAULT_SYNC_INTERVAL)
+    )
+    base[vol.Optional(CONF_SYNC_INTERVAL, default=sync_interval)] = int
     base[vol.Optional(CONF_DEFAULT_STATE, default=defaults.get(CONF_DEFAULT_STATE, DEFAULT_DEFAULT_STATE))] = bool
     base[vol.Optional(CONF_NOTIFY_EVENTS, default=defaults.get(CONF_NOTIFY_EVENTS, DEFAULT_NOTIFY_EVENTS))] = bool
     return vol.Schema(base)

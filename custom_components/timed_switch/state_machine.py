@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,11 +35,11 @@ class Transition:
 
 
 # egy állapot összes eseményének cellái: esemény -> [Transition, ...]
-StateCells = dict[str, list[Transition]]
+StateCells = Dict[str, List[Transition]]
 # a teljes átmeneti tábla: állapot -> StateCells
-TransitionTable = dict[str, StateCells]
+TransitionTable = Dict[str, StateCells]
 # entry/exit akciók állapotonként
-StateActions = dict[str, tuple[Action, ...]]
+StateActions = Dict[str, Tuple[Action, ...]]
 
 
 class StateMachine:
