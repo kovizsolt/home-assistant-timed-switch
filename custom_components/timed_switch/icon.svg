@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title">
+  <title id="title">Timed Switch</title>
+  <defs>
+    <linearGradient id="timed-bg" x1="34" y1="26" x2="222" y2="230" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7259E8"/>
+      <stop offset="1" stop-color="#244EC4"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="232" height="232" rx="54" fill="url(#timed-bg)"/>
+  <circle cx="128" cy="104" r="57" fill="#fff" stroke="#19399C" stroke-width="8"/>
+  <path d="M128 69v37l27 16" fill="none" stroke="#3456C8" stroke-width="11"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="128" cy="104" r="7" fill="#3456C8"/>
+  <path d="M70 151h116a34 34 0 0 1 0 68H70a34 34 0 0 1 0-68Z"
+        fill="#fff" stroke="#19399C" stroke-width="8"/>
+  <circle cx="182" cy="185" r="23" fill="#FF9F1C"/>
+  <path d="M182 173v13l9 6" fill="none" stroke="#fff" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
