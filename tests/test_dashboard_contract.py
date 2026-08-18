@@ -111,6 +111,24 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn('type: "custom:timed-switch-schedule-row"', card)
         self.assertLess(card.index('label: "Schedule"'), card.index('label: "Timing"'))
 
+    def test_UI12_schedule_editing_has_visible_save_feedback_and_error_dialog(self):
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
+        self.assertIn('this._setStatus("saving")', card)
+        self.assertIn('this._setStatus("saved")', card)
+        self.assertIn('this._setStatus("error")', card)
+        self.assertIn('document.createElement("ha-dialog")', card)
+        self.assertIn('error?.body?.message || error?.message', card)
+        self.assertIn('}, undefined, false)', card)
+
+    def test_UI13_cron_validation_precedes_persistence_and_recalculation(self):
+        controller = (COMPONENT / "controller.py").read_text()
+        validation = controller.index("croniter(expression, dt_util.now())")
+        persistence = controller.index("async_update_entry", validation)
+        recalculation = controller.index("await self._async_cron_tick", persistence)
+        self.assertLess(validation, persistence)
+        self.assertLess(persistence, recalculation)
+        self.assertIn("ServiceValidationError", controller)
+
 
 if __name__ == "__main__":
     unittest.main()

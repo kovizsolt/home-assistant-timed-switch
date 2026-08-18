@@ -14,9 +14,11 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
+from croniter import croniter
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_ON, STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import Context, HomeAssistant, State, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import storage
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
@@ -442,6 +444,19 @@ class Controller:
     async def async_set_cron_list(self, key: str, value: str) -> None:
         """Apply and persist an ON/OFF cron list edited through its text entity."""
         parsed = parse_cron_list(value)
+        schedule_name = "ON" if key == CONF_ON_CRONS else "OFF"
+        for line_number, line in enumerate(value.splitlines(), start=1):
+            uncommented = line.split("#", maxsplit=1)[0]
+            for expression in (part.strip() for part in uncommented.split(",")):
+                if not expression:
+                    continue
+                try:
+                    croniter(expression, dt_util.now())
+                except Exception as err:
+                    raise ServiceValidationError(
+                        f'Hibás {schedule_name} időzítés a(z) {line_number}. sorban: '
+                        f'"{expression}". {err}'
+                    ) from err
         if key == CONF_ON_CRONS:
             self.on_crons = parsed
         elif key == CONF_OFF_CRONS:

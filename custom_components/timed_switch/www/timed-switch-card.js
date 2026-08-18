@@ -36,6 +36,9 @@ class TimedSwitchScheduleRow extends HTMLElement {
       <style>
         :host { display: block; padding: 8px 16px; }
         .label { color: var(--primary-text-color); font-size: 14px; margin-bottom: 6px; }
+        .label.saving { color: var(--warning-color, #ff9800); }
+        .label.saved { color: var(--success-color, #4caf50); }
+        .label.error { color: var(--error-color, #db4437); }
         textarea {
           box-sizing: border-box;
           display: block;
@@ -58,7 +61,8 @@ class TimedSwitchScheduleRow extends HTMLElement {
       </style>
       <div class="label"></div>
     `;
-    root.querySelector(".label").textContent = config.name;
+    this._label = root.querySelector(".label");
+    this._label.textContent = config.name;
     this._input = document.createElement("textarea");
     this._input.setAttribute("rows", "3");
     this._input.setAttribute("aria-label", config.name);
@@ -79,15 +83,52 @@ class TimedSwitchScheduleRow extends HTMLElement {
 
   async _save() {
     if (!this._hass || !this._input) return;
+    clearTimeout(this._statusTimer);
+    this._setStatus("saving");
     this._input.disabled = true;
     try {
       await this._hass.callService("text", "set_value", {
         entity_id: this._config.entity,
         value: this._input.value,
-      });
+      }, undefined, false);
+      this._setStatus("saved");
+      this._statusTimer = setTimeout(() => this._setStatus(), 3000);
+    } catch (error) {
+      this._setStatus("error");
+      this._statusTimer = setTimeout(() => this._setStatus(), 3000);
+      this._showErrorDialog(this._errorMessage(error));
     } finally {
       this._input.disabled = false;
     }
+  }
+
+  _setStatus(status = "") {
+    if (!this._label) return;
+    this._label.classList.remove("saving", "saved", "error");
+    if (status) this._label.classList.add(status);
+  }
+
+  _errorMessage(error) {
+    return error?.body?.message || error?.message || "Az időzítés mentése nem sikerült.";
+  }
+
+  _showErrorDialog(message) {
+    const dialog = document.createElement("ha-dialog");
+    dialog.setAttribute("open", "");
+    dialog.heading = "Az időzítés nem menthető";
+
+    const content = document.createElement("div");
+    content.style.whiteSpace = "pre-wrap";
+    content.textContent = message;
+    dialog.appendChild(content);
+
+    const close = document.createElement("ha-button");
+    close.setAttribute("slot", "primaryAction");
+    close.textContent = "Bezárás";
+    close.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("closed", () => dialog.remove());
+    dialog.appendChild(close);
+    document.body.appendChild(dialog);
   }
 }
 
