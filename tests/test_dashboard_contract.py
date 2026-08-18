@@ -37,6 +37,8 @@ class DashboardContractTests(unittest.TestCase):
             "_sync_remaining",
             "_manual_timeout",
             "_sync_interval",
+            "_on_crons",
+            "_off_crons",
             "_problem",
             "_since_last_change",
             "_device_last_changed",
@@ -61,7 +63,7 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn("window.loadCardHelpers", card)
         self.assertIn("helpers.createCardElement", card)
         self.assertIn('type: "entities"', card)
-        self.assertNotIn("callService(", card)
+        self.assertIn('callService("text", "set_value"', card)
 
     def test_UI6_card_uses_full_section_width_and_ha_locale(self):
         card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
@@ -101,6 +103,13 @@ class DashboardContractTests(unittest.TestCase):
         manual = card.index('ids.manual, "Manual override"')
         self.assertLess(target, device)
         self.assertLess(device, manual)
+
+    def test_UI11_schedule_lists_are_full_width_multiline_fields(self):
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
+        self.assertIn('label: "Schedule"', card)
+        self.assertIn('document.createElement("textarea")', card)
+        self.assertIn('type: "custom:timed-switch-schedule-row"', card)
+        self.assertLess(card.index('label: "Schedule"'), card.index('label: "Timing"'))
 
 
 if __name__ == "__main__":

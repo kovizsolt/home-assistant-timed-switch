@@ -426,6 +426,7 @@ class Controller:
             # Korábbi hiba volt: ilyenkor default_state-re "korrigáltuk" volna vissza,
             # ami hamis schedule_on/off eseményt generált minden tick-nél.
             self.next_schedule = None
+            await self._notify()
             return
         # ld. async_setup megjegyzését: a cron-kiértékelés helyi időben fut, nem UTC-ben.
         sched = evaluate_schedule(self.on_crons, self.off_crons, dt_util.now())
@@ -437,6 +438,20 @@ class Controller:
             await self.main.handle(EVT_SCHEDULE_ON if sched.timed_state else EVT_SCHEDULE_OFF, self)
             await self.async_save()
         await self._notify()
+
+    async def async_set_cron_list(self, key: str, value: str) -> None:
+        """Apply and persist an ON/OFF cron list edited through its text entity."""
+        parsed = parse_cron_list(value)
+        if key == CONF_ON_CRONS:
+            self.on_crons = parsed
+        elif key == CONF_OFF_CRONS:
+            self.off_crons = parsed
+        else:
+            raise ValueError(f"Unsupported cron-list key: {key}")
+
+        options = {**(self.entry.options or {}), key: value}
+        self.hass.config_entries.async_update_entry(self.entry, options=options)
+        await self._async_cron_tick(dt_util.now())
 
     def _schedule_manual_expiry(self) -> None:
         self._cancel_manual_timer()

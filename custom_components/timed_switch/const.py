@@ -11,7 +11,7 @@ DOMAIN = "timed_switch"
 CARD_URL = "/timed_switch/timed-switch-card.js"
 CARD_FILENAME = "timed-switch-card.js"
 
-PLATFORMS = ["switch", "sensor", "number", "binary_sensor"]
+PLATFORMS = ["switch", "sensor", "number", "binary_sensor", "text"]
 
 SUPPORTED_TARGET_DOMAINS = ["switch", "input_boolean", "light", "script", "button"]
 
@@ -69,6 +69,8 @@ SUFFIX_SINCE_LAST_CHANGE = "since_last_change"
 SUFFIX_DEVICE_LAST_CHANGED = "device_last_changed"
 SUFFIX_MANUAL_TIMEOUT = "manual_timeout"
 SUFFIX_SYNC_INTERVAL = "sync_interval"
+SUFFIX_ON_CRONS = "on_crons"
+SUFFIX_OFF_CRONS = "off_crons"
 
 ATTR_DEVICE_AVAILABLE = "device_available"
 ATTR_NEXT_SCHEDULE = "next_schedule"

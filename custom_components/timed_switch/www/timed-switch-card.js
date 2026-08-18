@@ -27,6 +27,74 @@ if (!customElements.get("timed-switch-remaining-row")) {
   customElements.define("timed-switch-remaining-row", TimedSwitchRemainingRow);
 }
 
+class TimedSwitchScheduleRow extends HTMLElement {
+  setConfig(config) {
+    if (!config.entity) throw new Error("Schedule row requires an entity");
+    this._config = config;
+    const root = this.shadowRoot || this.attachShadow({ mode: "open" });
+    root.innerHTML = `
+      <style>
+        :host { display: block; padding: 8px 16px; }
+        .label { color: var(--primary-text-color); font-size: 14px; margin-bottom: 6px; }
+        textarea {
+          box-sizing: border-box;
+          display: block;
+          width: 100%;
+          min-height: 76px;
+          resize: vertical;
+          padding: 10px 12px;
+          border: 1px solid var(--outline-color, var(--divider-color));
+          border-radius: var(--ha-card-border-radius, 12px);
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
+          font: inherit;
+          line-height: 1.4;
+        }
+        textarea:focus {
+          border-color: var(--primary-color);
+          outline: 1px solid var(--primary-color);
+        }
+        textarea:disabled { color: var(--disabled-text-color); }
+      </style>
+      <div class="label"></div>
+    `;
+    root.querySelector(".label").textContent = config.name;
+    this._input = document.createElement("textarea");
+    this._input.setAttribute("rows", "3");
+    this._input.setAttribute("aria-label", config.name);
+    this._input.placeholder = "One cron expression per line";
+    this._input.addEventListener("change", () => this._save());
+    root.appendChild(this._input);
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._input || this.shadowRoot?.activeElement === this._input) return;
+    const state = hass.states[this._config.entity];
+    this._input.value = state?.state === "unknown" || state?.state === "unavailable"
+      ? ""
+      : state?.state || "";
+    this._input.disabled = !state;
+  }
+
+  async _save() {
+    if (!this._hass || !this._input) return;
+    this._input.disabled = true;
+    try {
+      await this._hass.callService("text", "set_value", {
+        entity_id: this._config.entity,
+        value: this._input.value,
+      });
+    } finally {
+      this._input.disabled = false;
+    }
+  }
+}
+
+if (!customElements.get("timed-switch-schedule-row")) {
+  customElements.define("timed-switch-schedule-row", TimedSwitchScheduleRow);
+}
+
 class TimedSwitchCard extends HTMLElement {
   static getStubConfig(hass, entities = [], entitiesFill = []) {
     const suggested = [...entities, ...entitiesFill]
@@ -101,6 +169,8 @@ class TimedSwitchCard extends HTMLElement {
       syncRemaining: `sensor.${objectId}_sync_remaining`,
       timeout: `number.${objectId}_manual_timeout`,
       interval: `number.${objectId}_sync_interval`,
+      onCrons: `text.${objectId}_on_crons`,
+      offCrons: `text.${objectId}_off_crons`,
       problem: `binary_sensor.${objectId}_problem`,
       since: `sensor.${objectId}_since_last_change`,
       deviceChanged: `sensor.${objectId}_device_last_changed`,
@@ -127,28 +197,35 @@ class TimedSwitchCard extends HTMLElement {
       || expected?.attributes?.friendly_name?.replace(/ Expected$/, "")
       || "Timed Switch";
     const rows = [
-      this._entityRow(ids.expected, "Target state"),
-      this._entityRow(ids.device, "Device state"),
-      this._entityRow(ids.manual, "Manual override"),
-      this._entityRow(ids.timed, "Scheduled state"),
+      this._entityRow(ids.expected, "Target state:"),
+      this._entityRow(ids.device, "Device state:"),
+      this._entityRow(ids.manual, "Manual override:"),
+      this._entityRow(ids.timed, "Scheduled state:"),
+      { type: "section", label: "Schedule" },
+      this._hass.states[ids.onCrons] ? {
+        type: "custom:timed-switch-schedule-row", entity: ids.onCrons, name: "ON time(s):",
+      } : undefined,
+      this._hass.states[ids.offCrons] ? {
+        type: "custom:timed-switch-schedule-row", entity: ids.offCrons, name: "OFF time(s):",
+      } : undefined,
       { type: "section", label: "Timing" },
-      this._entityRow(ids.timeout, "Manual timeout"),
-      this._entityRow(ids.interval, "Sync interval"),
-      this._remainingRow(ids.remaining, ids.timeout, "Manual remaining"),
-      this._remainingRow(ids.syncRemaining, ids.interval, "Sync remaining"),
+      this._entityRow(ids.timeout, "Manual timeout:"),
+      this._entityRow(ids.interval, "Sync interval:"),
+      this._remainingRow(ids.remaining, ids.timeout, "Manual remaining:"),
+      this._remainingRow(ids.syncRemaining, ids.interval, "Sync remaining:"),
       { type: "section", label: "Status" },
       this._hass.states[ids.timed] ? {
         type: "attribute", entity: ids.timed, attribute: "next_schedule",
-        name: "Next schedule", icon: "mdi:calendar-clock",
+        name: "Next schedule:", icon: "mdi:calendar-clock",
         time_format: { type: "datetime", style: "short" },
       } : undefined,
-      this._entityRow(ids.since, "Target changed", {
+      this._entityRow(ids.since, "Target changed:", {
         time_format: { type: "datetime", style: "short" },
       }),
-      this._entityRow(ids.deviceChanged, "Device changed", {
+      this._entityRow(ids.deviceChanged, "Device changed:", {
         time_format: { type: "datetime", style: "short" },
       }),
-      this._entityRow(ids.problem, "Status"),
+      this._entityRow(ids.problem, "Status:"),
     ].filter(Boolean);
     return {
       type: "entities", title, icon: "mdi:calendar-clock",
