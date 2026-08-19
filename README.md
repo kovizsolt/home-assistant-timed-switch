@@ -20,7 +20,7 @@ Supported target domains: `switch`, `input_boolean`, `light`, `script`, and `but
 
 ## Requirements
 
-- a working Home Assistant installation;
+- Home Assistant 2025.9.4 or newer;
 - access to the Home Assistant `config` directory;
 - permission to restart Home Assistant;
 - the `frontend` and `lovelace` integrations for the custom dashboard card.
@@ -29,6 +29,18 @@ Home Assistant automatically installs the Python dependency (`croniter`) declare
 `manifest.json`.
 
 ## Installation
+
+### HACS (recommended)
+
+1. Open HACS and select **Custom repositories** from the top-right menu.
+2. Add `https://github.com/kovizsolt/home-assistant-timed-switch` as an
+   **Integration** repository.
+3. Find **Timed Switch** in HACS and download it.
+4. Restart Home Assistant.
+5. Open **Settings → Devices & services → Add integration**.
+6. Search for **Timed Switch** and add it.
+
+### Manual installation
 
 1. Copy `custom_components/timed_switch` into the Home Assistant configuration
    directory so that the resulting path is:

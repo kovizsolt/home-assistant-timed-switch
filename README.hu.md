@@ -21,7 +21,7 @@ Támogatott célentitások: `switch`, `input_boolean`, `light`, `script` és `bu
 
 ## Követelmények
 
-- működő Home Assistant telepítés;
+- Home Assistant 2025.9.4 vagy újabb;
 - hozzáférés a Home Assistant `config` könyvtárához;
 - újraindítási jogosultság;
 - a Lovelace felület használatához a `frontend` és `lovelace` integráció.
@@ -30,6 +30,20 @@ A Python-függőséget (`croniter`) a Home Assistant a `manifest.json` alapján
 automatikusan telepíti.
 
 ## Telepítés
+
+### HACS (ajánlott)
+
+1. Nyisd meg a HACS felületét, majd a jobb felső menüben válaszd a
+   **Custom repositories** lehetőséget.
+2. Add hozzá a `https://github.com/kovizsolt/home-assistant-timed-switch` repót
+   **Integration** típussal.
+3. Keresd meg a HACS-ban a **Timed Switch** integrációt, majd töltsd le.
+4. Indítsd újra a Home Assistantot.
+5. Nyisd meg a **Beállítások → Eszközök és szolgáltatások → Integráció
+   hozzáadása** oldalt.
+6. Keresd meg a **Timed Switch** integrációt, majd add hozzá.
+
+### Kézi telepítés
 
 1. Másold a `custom_components/timed_switch` könyvtárat a Home Assistant
    konfigurációs könyvtárába, az alábbi struktúrával:
