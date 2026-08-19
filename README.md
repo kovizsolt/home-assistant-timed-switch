@@ -1,140 +1,136 @@
 # Timed Switch
 
-A Timed Switch egy Home Assistant custom integráció kapcsolható eszközök megbízható,
-időzített vezérlésére. Használható például egy fizikai okoskapcsoló (Smart Switch),
-relé vagy világítás előre megadott időpontokban történő be- és kikapcsolására. Egy
-integrációpéldány mindig egy célentitást kezel.
+[Magyar dokumentáció](README.hu.md) · [Changelog](CHANGELOG.md)
 
-Főbb lehetőségei:
+Timed Switch is a Home Assistant custom integration for reliable, scheduled control
+of switchable devices. It can turn a physical smart switch, relay, or light on and
+off at predefined times. Each integration instance controls exactly one target entity.
 
-- cron alapú, rugalmas BE/KI ütemezés;
-- kézi kapcsolási mód időkorlátos felülbírálással;
-- beállítható időközönként folyamatosan ellenőrzi a vezérelt kapcsoló tényleges
-  állapotát, és eltérés esetén visszaállítja a kívánt állapotot;
-- a működési állapot megőrzésével hibatűrő vezérlést biztosít Home Assistant-
-  újraindítás, üzemszünet vagy átmeneti hálózati probléma után is;
-- a célentitás elérhetőségének külön diagnosztikai jelzése.
+Key features:
 
-Támogatott célentitások: `switch`, `input_boolean`, `light`, `script` és `button`.
+- flexible cron-based ON/OFF schedules;
+- manual control with a timed override mode;
+- configurable continuous verification of the physical switch state, with automatic
+  correction when it differs from the expected state;
+- persisted operating state for resilient recovery after Home Assistant restarts,
+  outages, and temporary network failures;
+- separate diagnostics for target availability.
 
-## Követelmények
+Supported target domains: `switch`, `input_boolean`, `light`, `script`, and `button`.
 
-- működő Home Assistant telepítés;
-- hozzáférés a Home Assistant `config` könyvtárához;
-- újraindítási jogosultság;
-- a Lovelace felület használatához a `frontend` és `lovelace` integráció.
+## Requirements
 
-A Python-függőséget (`croniter`) a Home Assistant a `manifest.json` alapján
-automatikusan telepíti.
+- a working Home Assistant installation;
+- access to the Home Assistant `config` directory;
+- permission to restart Home Assistant;
+- the `frontend` and `lovelace` integrations for the custom dashboard card.
 
-## Telepítés
+Home Assistant automatically installs the Python dependency (`croniter`) declared in
+`manifest.json`.
 
-1. Másold a `custom_components/timed_switch` könyvtárat a Home Assistant
-   konfigurációs könyvtárába, az alábbi struktúrával:
+## Installation
+
+1. Copy `custom_components/timed_switch` into the Home Assistant configuration
+   directory so that the resulting path is:
 
    ```text
    <config>/custom_components/timed_switch/
    ```
 
-2. Indítsd újra a Home Assistantot.
-3. Nyisd meg a **Beállítások → Eszközök és szolgáltatások → Integráció
-   hozzáadása** oldalt.
-4. Keresd meg a **Timed Switch** integrációt, majd add hozzá.
+2. Restart Home Assistant.
+3. Open **Settings → Devices & services → Add integration**.
+4. Search for **Timed Switch** and add it.
 
-Frissítéskor cseréld le a teljes `timed_switch` könyvtár tartalmát, majd indítsd
-újra a Home Assistantot. A beállítások és a futási állapot a Home Assistant saját
-tárolójában maradnak.
+To update, replace the complete `timed_switch` directory and restart Home Assistant.
+Configuration and runtime state are retained in Home Assistant storage.
 
-## Konfiguráció
+## Configuration
 
-Az integráció kizárólag a Home Assistant felületén konfigurálható; nem kell
-bejegyzést készíteni a `configuration.yaml` fájlban.
+The integration is configured entirely through the Home Assistant UI. No
+`configuration.yaml` entry is required.
 
-Új példány létrehozásakor add meg:
+When creating an instance, configure:
 
-- **Név:** az eszköz és az entitások neveinek alapja;
-- **ON cron-lista:** a bekapcsolási időpontok;
-- **OFF cron-lista:** a kikapcsolási időpontok;
-- **Manuális timeout:** a kézi felülbírálás időtartama másodpercben, alapértéke
-  600; a `0` jelentése: a következő ütemezett váltásig marad kézi módban;
-- **Szinkronizálási intervallum:** a célentitás ellenőrzésének periódusa
-  másodpercben, alapértéke 60; a `0` kikapcsolja az ellenőrzést;
-- **Alapértelmezett állapot:** a kezdőállapot, ha nincs mentett vagy
-  kiértékelhető ütemezés;
-- **Értesítések küldése:** ütemezett célváltáskor és korrekciós műveletkor
-  tartós Home Assistant-értesítést hoz létre.
+- **Name:** base name for the device and its entities;
+- **ON cron list:** scheduled activation times;
+- **OFF cron list:** scheduled deactivation times;
+- **Manual timeout:** duration of a manual override in seconds (default: 600); `0`
+  keeps the override active until the next scheduled change;
+- **Sync interval:** target-state verification period in seconds (default: 60); `0`
+  disables verification;
+- **Default state:** initial state when no saved or evaluable schedule exists;
+- **Send notifications:** creates a persistent Home Assistant notification for
+  scheduled target changes and corrective actions.
 
-Ezután válaszd ki a vezérelt eszközt:
+Then select the controlled device:
 
-- **Beépített virtuális kapcsoló:** az integráció saját célkapcsolót hoz létre;
-- **Meglévő entitás:** egy már létező támogatott entitást vezérel;
-- **Új Virtual Switch:** új `virtual_switch` példányt készít és azt használja
-  célként; ez csak akkor látható, ha a Virtual Switch integráció is telepítve van.
+- **Built-in virtual switch:** creates the integration's own target switch;
+- **Existing entity:** controls an existing entity in one of the supported domains;
+- **New Virtual Switch:** creates and targets a new `virtual_switch` instance; this
+  option is available only when the Virtual Switch integration is installed.
 
-A beállítások később a **Beállítások → Eszközök és szolgáltatások → Timed
-Switch → Konfigurálás** útvonalon módosíthatók. A célentitás módosítása teljes
-integráció-újratöltést igényel; az ütemezések és időzítések élőben frissülnek.
+Settings can later be changed under **Settings → Devices & services → Timed Switch →
+Configure**. Changing the target requires a full integration reload. Schedule and
+timing changes are applied live.
 
-### Cron formátum
+### Cron format
 
-A listák soronként vagy vesszővel elválasztva több, ötmezős `croniter`
-kifejezést fogadnak. A `#` utáni rész megjegyzés. Az időpontok a Home Assistantban
-beállított helyi időzónában, perc pontossággal értendők.
+The ON and OFF fields accept multiple five-field `croniter` expressions, separated
+by commas or new lines. Text after `#` is treated as a comment. Expressions use the
+local time zone configured in Home Assistant and have one-minute precision.
 
 ```text
-# Minden hétköznap 07:30
+# At 07:30 every weekday
 30 7 * * 1-5
 
-# Minden nap 22:00
+# At 22:00 every day
 0 22 * * *
 ```
 
-Ha a kapcsolónak felváltva 10 percig BE, majd 10 percig KI állapotban kell lennie,
-az **ON cron-listába** kerüljön:
+For an alternating cycle of 10 minutes ON and 10 minutes OFF, use this **ON cron
+list**:
 
 ```text
 0,20,40 * * * *
 ```
 
-Az **OFF cron-listába** pedig:
+And this **OFF cron list**:
 
 ```text
 10,30,50 * * * *
 ```
 
-Így minden óra `00`, `20` és `40` percében bekapcsol, `10`, `30` és `50` percében
-kikapcsol. A ciklus óraváltáskor is folyamatos: például 00:50-kor kikapcsol, majd
-01:00-kor ismét bekapcsol.
+This turns the device on at minute `00`, `20`, and `40`, and off at minute `10`,
+`30`, and `50` of every hour. The cycle continues across hour boundaries.
 
-Ugyanez rövidebb, lépésközös cron jelöléssel is megadható. Az **ON cron-lista**:
+The same schedule can be written in the shorter step syntax. The **ON cron list**:
 
 ```text
 */20 * * * *
 ```
 
-Az **OFF cron-lista**:
+The **OFF cron list**:
 
 ```text
 10-59/20 * * * *
 ```
 
-A `*/20` jelentése „minden 20. percben, a 0. perctől kezdve”, ezért `00`, `20`
-és `40` perckor fut. A `10-59/20` a 10. perctől induló 20 perces lépésköz, vagyis
-`10`, `30` és `50` perckor fut. A két lista együtt eredményezi a 10 perc BE,
-10 perc KI működést. A jelenlegi élő beállításban használt `*/10` és `5-59/10`
-jelölés ugyanezt a mintát követi, de ott az állapot 5 percenként vált.
+`*/20` means every twentieth minute starting at minute 0. `10-59/20` means every
+twentieth minute starting at minute 10. Together they produce the 10-minute ON,
+10-minute OFF cycle. The `*/10` and `5-59/10` pattern follows the same principle,
+but changes state every five minutes.
 
-Ha mindkét lista üres, nincs automatikus váltás, és az ütemezett állapot az
-alapértelmezett értéken marad.
+When both lists are empty, no scheduled transition occurs and the scheduled state
+remains at its default value.
 
-## UI megjelenítés
+## Dashboard display
 
-Az integráció egy **Timed Switch Card** nevű egyedi dashboard-kártyát tartalmaz.
-Storage módban a JavaScript-erőforrás automatikusan regisztrálódik. A dashboard
-szerkesztésekor válaszd a **Kártya hozzáadása → Timed Switch Card** elemet, majd
-a példány `switch.<név>_expected` entitását.
+The integration includes a custom **Timed Switch Card**. In Lovelace storage mode,
+the JavaScript resource is registered automatically. While editing a dashboard,
+select **Add card → Timed Switch Card**, then select the instance's
+`switch.<name>_expected` entity.
 
-YAML dashboard vagy YAML erőforrásmód esetén add hozzá kézzel:
+In YAML dashboard or YAML resource mode, add the resource manually:
 
 ```yaml
 lovelace:
@@ -143,59 +139,56 @@ lovelace:
       type: module
 ```
 
-A kártya YAML konfigurációja:
+Card configuration in YAML:
 
 ```yaml
 type: custom:timed-switch-card
-entity: switch.kerti_vilagitas_expected
+entity: switch.garden_lights_expected
 ```
 
-A kártyán elérhető a cél-, eszköz- és ütemezett állapot, a kézi mód, az ON/OFF
-ütemezés, az időzítések, a következő váltás és a diagnosztikai állapot. Ha egy
-másodlagos entitás le van tiltva, a kártya a többi funkcióval tovább működik.
+The card shows the expected, physical, and scheduled states, manual mode, ON/OFF
+schedules, timing controls, next scheduled change, and diagnostics. If a secondary
+entity is disabled, the remaining controls continue to work.
 
-## Használat
+## Usage
 
-Normál, **AUTO** módban az `Expected` kapcsoló követi az ütemezett állapotot, a
-komponens pedig ezt érvényesíti a célentitáson. Ha a célentitást, az `Expected`
-vagy a `Device` kapcsolót kézzel átbillented, a példány **MANUAL** módba kerül.
-A timeout lejártakor visszatér AUTO módba és felveszi az aktuális ütemezett
-állapotot.
+In normal **AUTO** mode, the `Expected` switch follows the scheduled state and the
+integration applies it to the target. Manually changing the target, `Expected`, or
+`Device` switch enters **MANUAL** mode. When the timeout expires, the instance returns
+to AUTO mode and applies the current scheduled state.
 
-A fontosabb létrehozott entitások (`<név>` a névből képzett azonosító):
+Main entities (`<name>` is the slug generated from the instance name):
 
-| Entitás | Szerep |
+| Entity | Purpose |
 |---|---|
-| `switch.<név>_expected` | A kívánt célállapot; kézzel is vezérelhető |
-| `switch.<név>_device` | A tényleges célentitás kétirányú tükre |
-| `switch.<név>_timed_state` | Az ütemezés nyers állapota; kézi váltása ütemezési eseményt szimulál |
-| `switch.<név>_is_manual_mode` | Kézi felülbírálás be- vagy kikapcsolása |
-| `number.<név>_manual_timeout` | Következő kézi felülbírálások időkorlátja |
-| `number.<név>_sync_interval` | Az állapot-szinkronizálás periódusa |
-| `text.<név>_on_crons`, `text.<név>_off_crons` | Az ütemezések élő szerkesztése |
-| `binary_sensor.<név>_problem` | A célentitás elérhetőségi hibája |
+| `switch.<name>_expected` | Desired target state; can also be controlled manually |
+| `switch.<name>_device` | Two-way mirror of the physical target entity |
+| `switch.<name>_timed_state` | Raw schedule output; manual changes simulate schedule events |
+| `switch.<name>_is_manual_mode` | Enables or clears manual override mode |
+| `number.<name>_manual_timeout` | Timeout used for subsequent manual overrides |
+| `number.<name>_sync_interval` | Physical-state verification interval |
+| `text.<name>_on_crons`, `text.<name>_off_crons` | Live schedule editing |
+| `binary_sensor.<name>_problem` | Target availability problem indicator |
 
-A további szenzorok a manuális és szinkronizálási visszaszámlálást, valamint az
-utolsó cél- és eszközállapot-változás idejét mutatják. A Home Assistant egyes
-konfigurációs és diagnosztikai entitásokat alapból elrejthet a normál
-eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
+Additional sensors show the manual and synchronization countdowns and the times of
+the most recent target and physical-device state changes. Home Assistant may hide
+some configuration and diagnostic entities from the normal device view by default;
+they can be enabled from the device's entity list.
 
-### Fontos viselkedés
+### Important behavior
 
-- MANUAL módban az ütemezés a háttérben tovább frissül, de nem írja felül az
-  eszközt a timeout lejártáig.
-- `manual_timeout: 0` esetén a következő ON vagy OFF ütemezési esemény zárja le
-  a manuális módot.
-- AUTO módban a szinkronizáló ellenőrzés kijavítja a kívánt és tényleges állapot
-  eltérését. MANUAL módban nem avatkozik be.
-- `unknown` vagy `unavailable` cél esetén a vezérlési logika tovább fut, a hibát
-  a `Problem` bináris szenzor jelzi.
-- A futási állapot újraindítás után helyreáll; a közben lejárt kézi időkorlátot
-  az integráció induláskor figyelembe veszi.
+- In MANUAL mode, the schedule continues to update in the background but does not
+  overwrite the device until the timeout expires.
+- With `manual_timeout: 0`, the next ON or OFF schedule event ends manual mode.
+- In AUTO mode, state verification corrects mismatches between the desired and
+  physical states. It does not intervene in MANUAL mode.
+- When the target is `unknown` or `unavailable`, the control logic continues to run
+  and the `Problem` binary sensor reports the fault.
+- Runtime state is restored after a restart. A manual timeout that expired during
+  downtime is taken into account during startup.
 
-## Eltávolítás
+## Removal
 
-A **Beállítások → Eszközök és szolgáltatások → Timed Switch** oldalon töröld az
-összes példányt, indítsd újra a Home Assistantot, majd távolítsd el a
-`<config>/custom_components/timed_switch` könyvtárat. Az integráció törlése a
-hozzá tartozó mentett állapotot is eltávolítja.
+Remove every instance under **Settings → Devices & services → Timed Switch**, restart
+Home Assistant, and then remove `<config>/custom_components/timed_switch`. Removing an
+integration entry also removes its stored runtime state.
