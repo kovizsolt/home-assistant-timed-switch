@@ -10,6 +10,11 @@ Versions use the project's `major.minor.build` numbering scheme.
 ### Added
 
 - English and Hungarian user documentation.
+- A crontab.guru reference for additional cron-expression guidance.
+
+### Fixed
+
+- ON/OFF cron expressions entered in configuration or the dashboard are normalized to five fields: missing fields are filled with `*`, wildcard-only extra fields are removed, and other extra fields retain the existing validation error behavior.
 
 ## [0.1.0040] - 2026-08-19
 

@@ -82,6 +82,8 @@ integráció-újratöltést igényel; az ütemezések és időzítések élőben
 A listák soronként vagy vesszővel elválasztva több, ötmezős `croniter`
 kifejezést fogadnak. A `#` utáni rész megjegyzés. Az időpontok a Home Assistantban
 beállított helyi időzónában, perc pontossággal értendők.
+A rövidebb kifejezéseket a komponens jobb oldalon `*` mezőkkel egészíti ki. Az
+ötödik utáni, kizárólag `*` értékű mezőket eldobja; más többletmezőnél hibát jelez.
 
 ```text
 # Minden hétköznap 07:30
@@ -128,6 +130,9 @@ jelölés ugyanezt a mintát követi, de ott az állapot 5 percenként vált.
 
 Ha mindkét lista üres, nincs automatikus váltás, és az ütemezett állapot az
 alapértelmezett értéken marad.
+
+A cron-kifejezések összeállításához és ellenőrzéséhez további segítséget a
+[crontab.guru](https://crontab.guru/) oldalon találsz.
 
 ## UI megjelenítés
 

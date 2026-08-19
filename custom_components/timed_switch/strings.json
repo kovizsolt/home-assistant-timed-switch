@@ -33,6 +33,7 @@
     },
     "error": {
       "name_required": "A név megadása kötelező",
+      "invalid_cron": "Hibás cron-időzítés. Legfeljebb 5 mező adható meg; az extra mezők csak * értékűek lehetnek.",
       "virtual_switch_create_failed": "A Virtual Switch létrehozása sikertelen",
       "virtual_switch_already_exists": "Már létezik ilyen nevű Virtual Switch; válaszd a meglévő entitás lehetőséget"
     }

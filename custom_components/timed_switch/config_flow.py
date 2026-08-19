@@ -7,9 +7,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 from typing import Any, Optional
 
 import voluptuous as vol
+from croniter import croniter
 from homeassistant import config_entries
 from homeassistant import data_entry_flow
 from homeassistant.core import callback
@@ -34,8 +36,22 @@ from .const import (
     LEGACY_CONF_CHECK_INTERVAL,
     SUPPORTED_TARGET_DOMAINS,
 )
+from .helpers import CronFieldCountError, normalize_cron_list, parse_cron_list
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _normalize_cron_fields(user_input: dict[str, Any], errors: dict[str, str]) -> None:
+    """Normalize and validate both schedule fields before a config entry is saved."""
+    for key in (CONF_ON_CRONS, CONF_OFF_CRONS):
+        try:
+            normalized = normalize_cron_list(str(user_input.get(key, "")))
+            for expression in parse_cron_list(normalized):
+                croniter(expression, datetime.now())
+        except (CronFieldCountError, ValueError, KeyError):
+            errors[key] = "invalid_cron"
+        else:
+            user_input[key] = normalized
 
 
 def _schema(defaults: dict[str, Any], include_name: bool, include_target: bool = True) -> vol.Schema:
@@ -72,15 +88,16 @@ class TimedSwitchConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: Optional[dict[str, Any]] = None):
         errors: dict[str, str] = {}
         if user_input is not None:
+            _normalize_cron_fields(user_input, errors)
             name = user_input.get(CONF_NAME)
             if not name:
                 errors["base"] = "name_required"
-            else:
+            if not errors:
                 self._entry_data = dict(user_input)
                 return await self.async_step_target()
         return self.async_show_form(
             step_id="user",
-            data_schema=_schema({}, include_name=True, include_target=False),
+            data_schema=_schema(user_input or {}, include_name=True, include_target=False),
             errors=errors,
         )
 
@@ -149,7 +166,15 @@ class TimedSwitchOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input: Optional[dict[str, Any]] = None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            errors: dict[str, str] = {}
+            _normalize_cron_fields(user_input, errors)
+            if not errors:
+                return self.async_create_entry(title="", data=user_input)
+            return self.async_show_form(
+                step_id="init",
+                data_schema=_schema(user_input, include_name=False),
+                errors=errors,
+            )
 
         defaults = {**self.entry.data, **(self.entry.options or {})}
         return self.async_show_form(step_id="init", data_schema=_schema(defaults, include_name=False))

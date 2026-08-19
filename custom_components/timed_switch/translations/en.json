@@ -33,6 +33,7 @@
     },
     "error": {
       "name_required": "Name is required",
+      "invalid_cron": "Invalid cron schedule. At most 5 fields are allowed; extra fields may only be *.",
       "virtual_switch_create_failed": "Could not create the Virtual Switch",
       "virtual_switch_already_exists": "A Virtual Switch with this name already exists; select it as an existing entity"
     }

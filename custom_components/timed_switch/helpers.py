@@ -15,6 +15,36 @@ from typing import Optional
 from croniter import croniter
 
 
+class CronFieldCountError(ValueError):
+    """A cron expression has non-wildcard fields beyond the supported five."""
+
+
+def normalize_cron_list(raw: str) -> str:
+    """Complete short cron expressions and remove wildcard-only extra fields."""
+    normalized_lines: list[str] = []
+    for line in raw.splitlines():
+        expression_text, separator, comment = line.partition("#")
+        normalized_expressions: list[str] = []
+        for chunk in expression_text.split(","):
+            expression = chunk.strip()
+            if not expression:
+                continue
+            fields = expression.split()
+            if len(fields) < 5:
+                fields.extend("*" for _ in range(5 - len(fields)))
+            elif len(fields) > 5:
+                if any(field != "*" for field in fields[5:]):
+                    raise CronFieldCountError(expression)
+                fields = fields[:5]
+            normalized_expressions.append(" ".join(fields))
+
+        normalized_line = ", ".join(normalized_expressions)
+        if separator:
+            normalized_line += (" " if normalized_line else "") + f"#{comment}"
+        normalized_lines.append(normalized_line)
+    return "\n".join(normalized_lines)
+
+
 def parse_cron_list(raw: str) -> list[str]:
     """Cron-lista szöveges mezőből (soronként vagy vesszővel elválasztva, `#` komment)."""
     if not raw:

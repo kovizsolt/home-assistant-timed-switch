@@ -60,7 +60,13 @@ from .const import (
     STORE_VERSION,
     SUFFIX_VIRTUAL,
 )
-from .helpers import PersistedState, evaluate_schedule, parse_cron_list
+from .helpers import (
+    CronFieldCountError,
+    PersistedState,
+    evaluate_schedule,
+    normalize_cron_list,
+    parse_cron_list,
+)
 from .state_machine import StateMachine
 from .transition_table import (
     build_avail_table,
@@ -443,9 +449,23 @@ class Controller:
 
     async def async_set_cron_list(self, key: str, value: str) -> None:
         """Apply and persist an ON/OFF cron list edited through its text entity."""
-        parsed = parse_cron_list(value)
         schedule_name = "ON" if key == CONF_ON_CRONS else "OFF"
-        for line_number, line in enumerate(value.splitlines(), start=1):
+        try:
+            normalized_value = normalize_cron_list(value)
+        except CronFieldCountError as err:
+            expression = str(err)
+            line_number = next(
+                (number for number, line in enumerate(value.splitlines(), start=1)
+                 if expression in line.split("#", maxsplit=1)[0]),
+                1,
+            )
+            raise ServiceValidationError(
+                f'Hibás {schedule_name} időzítés a(z) {line_number}. sorban: '
+                f'"{expression}". A cron-kifejezés legfeljebb 5 mezőt tartalmazhat; '
+                "az extra mezők csak * értékűek lehetnek."
+            ) from err
+        parsed = parse_cron_list(normalized_value)
+        for line_number, line in enumerate(normalized_value.splitlines(), start=1):
             uncommented = line.split("#", maxsplit=1)[0]
             for expression in (part.strip() for part in uncommented.split(",")):
                 if not expression:
@@ -464,7 +484,7 @@ class Controller:
         else:
             raise ValueError(f"Unsupported cron-list key: {key}")
 
-        options = {**(self.entry.options or {}), key: value}
+        options = {**(self.entry.options or {}), key: normalized_value}
         self.hass.config_entries.async_update_entry(self.entry, options=options)
         await self._async_cron_tick(dt_util.now())
 

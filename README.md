@@ -78,6 +78,8 @@ timing changes are applied live.
 The ON and OFF fields accept multiple five-field `croniter` expressions, separated
 by commas or new lines. Text after `#` is treated as a comment. Expressions use the
 local time zone configured in Home Assistant and have one-minute precision.
+Short expressions are completed on the right with `*` fields. Fields after the fifth
+are discarded only when they are all `*`; any other extra field is reported as an error.
 
 ```text
 # At 07:30 every weekday
@@ -122,6 +124,9 @@ but changes state every five minutes.
 
 When both lists are empty, no scheduled transition occurs and the scheduled state
 remains at its default value.
+
+For additional help creating and checking cron expressions, see
+[crontab.guru](https://crontab.guru/).
 
 ## Dashboard display
 

@@ -224,6 +224,11 @@ hanem a B2.3 entitásainak egységes nézete és kezelőfelülete.
 
 ### B2.4 Időzítők / paraméterek
 
+A konfigurációs és dashboard-UI cron mezők minden kifejezést öt mezőre
+normalizálnak. A hiányzó mezőket jobb oldalon `*` értékekkel egészítik ki. Az ötödik
+utáni mezőket csak akkor dobják el, ha mind `*`; más többletmező a meglévő
+cron-validációs hibát eredményezi.
+
 | Név | Érték | Jelentés |
 |---|---|---|
 | `on_crons` / `off_crons` | felhasználó adja meg — cron-szerű kifejezések listája, soronként vagy vesszővel elválasztva, `#` a komment, `croniter` szintaxis, perc-pontosság | Külön ON és OFF cron-lista (nem egy kombinált tábla). **Élőben (reload nélkül) szerkeszthető** az options flow-n keresztül — a módosítás azonnal, integráció-újraindítás nélkül érvénybe lép és újraszámolja a `timed_state`-et/`next_schedule`-t. Ha mindkét lista üres: nincs időzítés — `timed_state` sosem változik (a `default_state` értéken marad), `next_schedule` értelmezhetetlen (`—`). A cron-kiértékelés minden perc pontos kezdetén (`second=0`) fut, ezért nem örökli a HA indulási másodpercét és nem okoz 0–59 másodperces késést. Ez független a `sync_interval`-tól — utóbbi kizárólag a device-szinkron pollerre (`state_sync`) vonatkozik. **A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában értelmezzük** (nem UTC-ben) — pl. `0 8 * * *` a felhasználó helyi 8:00-ját jelenti. |
