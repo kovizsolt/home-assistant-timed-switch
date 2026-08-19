@@ -12,6 +12,7 @@ Versions use the project's `major.minor.build` numbering scheme.
 - English and Hungarian user documentation.
 - A crontab.guru reference for additional cron-expression guidance.
 - HACS metadata, MIT license, and GitHub Actions for HACS and Hassfest validation.
+- A parameterized local validation script for repository checks, unit tests, and Dockerized Hassfest.
 
 ### Changed
 
@@ -22,6 +23,8 @@ Versions use the project's `major.minor.build` numbering scheme.
 ### Fixed
 
 - ON/OFF cron expressions entered in configuration or the dashboard are normalized to five fields: missing fields are filled with `*`, wildcard-only extra fields are removed, and other extra fields retain the existing validation error behavior.
+- Hassfest validation now recognizes the HTTP dependency, config-entry-only setup, and complete config-flow descriptions.
+- Dashboard contract tests follow the punctuation used by the current card labels.
 
 ## [0.1.0040] - 2026-08-19
 

@@ -61,6 +61,18 @@ Frissítéskor cseréld le a teljes `timed_switch` könyvtár tartalmát, majd i
 újra a Home Assistantot. A beállítások és a futási állapot a Home Assistant saját
 tárolójában maradnak.
 
+### Helyi validáció
+
+Publikálás előtt a repó gyökeréből futtatható minden helyi ellenőrzés:
+
+```bash
+./scripts/validate.sh all
+```
+
+Az egyenként választható módok: `static`, `tests` és `hassfest`. A `hassfest`
+vagy `all` módhoz adott `--no-pull` kapcsoló a már letöltött Docker image-et
+használja annak frissítése nélkül.
+
 ## Konfiguráció
 
 Az integráció kizárólag a Home Assistant felületén konfigurálható; nem kell

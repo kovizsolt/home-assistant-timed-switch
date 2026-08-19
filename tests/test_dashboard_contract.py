@@ -93,14 +93,14 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn('const disabled = duration === 0', card)
         self.assertIn('this.style.opacity = disabled ? "0.38"', card)
         self.assertIn('this.style.pointerEvents = disabled ? "none"', card)
-        self.assertIn('ids.remaining, ids.timeout, "Manual remaining"', card)
-        self.assertIn('ids.syncRemaining, ids.interval, "Sync remaining"', card)
+        self.assertIn('ids.remaining, ids.timeout, "Manual remaining:"', card)
+        self.assertIn('ids.syncRemaining, ids.interval, "Sync remaining:"', card)
 
     def test_UI10_device_state_follows_target_state(self):
         card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
-        target = card.index('ids.expected, "Target state"')
-        device = card.index('ids.device, "Device state"')
-        manual = card.index('ids.manual, "Manual override"')
+        target = card.index('ids.expected, "Target state:"')
+        device = card.index('ids.device, "Device state:"')
+        manual = card.index('ids.manual, "Manual override:"')
         self.assertLess(target, device)
         self.assertLess(device, manual)
 

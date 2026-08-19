@@ -3,6 +3,7 @@
     "step": {
       "user": {
         "title": "Timed Switch — új eszköz",
+        "description": "Configure the basic settings of the timed switch.",
         "data": {
           "name": "Név",
           "target_entity_id": "Vezérelt entitás (üresen hagyva virtuális eszköz jön létre)",

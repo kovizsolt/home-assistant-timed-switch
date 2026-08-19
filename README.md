@@ -56,6 +56,17 @@ Home Assistant automatically installs the Python dependency (`croniter`) declare
 To update, replace the complete `timed_switch` directory and restart Home Assistant.
 Configuration and runtime state are retained in Home Assistant storage.
 
+### Local validation
+
+Before publishing, run every local check from the repository root:
+
+```bash
+./scripts/validate.sh all
+```
+
+Individual modes are `static`, `tests`, and `hassfest`. Add `--no-pull` to the
+Hassfest or `all` mode to use the locally cached Docker image.
+
 ## Configuration
 
 The integration is configured entirely through the Home Assistant UI. No
