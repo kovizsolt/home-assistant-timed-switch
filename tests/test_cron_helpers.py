@@ -3,6 +3,7 @@ import os
 import sys
 import types
 import unittest
+from datetime import datetime, timedelta, timezone
 
 
 PKG_DIR = os.path.join(
@@ -56,6 +57,42 @@ class CronNormalizationTests(unittest.TestCase):
             "# morning\n\n0 7 * * *",
         )
 
+
+class ExternalScheduleTests(unittest.TestCase):
+    def test_external_schedule_is_active_until_a_newer_cron_event(self):
+        external = datetime(2026, 8, 27, 18, 1, tzinfo=timezone.utc)
+        self.assertTrue(
+            helpers.external_schedule_is_active(
+                external, external - timedelta(minutes=1)
+            )
+        )
+        self.assertFalse(
+            helpers.external_schedule_is_active(
+                external, external + timedelta(minutes=1)
+            )
+        )
+
+    def test_external_schedule_remains_active_without_crons(self):
+        external = datetime(2026, 8, 27, 18, 1, tzinfo=timezone.utc)
+        self.assertTrue(helpers.external_schedule_is_active(external, None))
+
+    def test_persisted_state_reads_legacy_data(self):
+        state = helpers.PersistedState.from_dict(
+            {"main_state": "AUTO", "expected_state": False, "manual_until": None}
+        )
+        self.assertIsNotNone(state)
+        self.assertIsNone(state.external_schedule_state)
+        self.assertIsNone(state.external_schedule_changed_at)
+
+    def test_external_schedule_state_round_trips_through_storage(self):
+        changed_at = "2026-08-27T18:01:00+00:00"
+        original = helpers.PersistedState(
+            "AUTO", False, None, True, changed_at
+        )
+        restored = helpers.PersistedState.from_dict(original.to_dict())
+        self.assertIsNotNone(restored)
+        self.assertTrue(restored.external_schedule_state)
+        self.assertEqual(restored.external_schedule_changed_at, changed_at)
 
 if __name__ == "__main__":
     unittest.main()

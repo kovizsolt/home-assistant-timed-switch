@@ -9,6 +9,7 @@ Versions use the project's `major.minor.build` numbering scheme.
 
 ### Added
 
+- External automations can override the scheduled state through the standard Timed State switch until the next actual cron occurrence; the override is persisted while minute-aligned cron evaluation continues in the background.
 - English and Hungarian user documentation.
 - A crontab.guru reference for additional cron-expression guidance.
 - HACS metadata, MIT license, and GitHub Actions for HACS and Hassfest validation.
@@ -17,7 +18,7 @@ Versions use the project's `major.minor.build` numbering scheme.
 ### Changed
 
 - Prepared repository metadata for publication under the `kovizsolt` GitHub account.
-- Declared Home Assistant 2025.9.4 as the minimum supported version and classified the integration as a helper.
+- Declared Home Assistant 2026.8.2 as the minimum supported version and classified the integration as a helper.
 - Added HACS custom-repository installation instructions.
 
 ### Fixed

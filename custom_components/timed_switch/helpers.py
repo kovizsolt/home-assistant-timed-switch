@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from croniter import croniter
@@ -65,6 +65,7 @@ class ScheduleResult:
 
     timed_state: Optional[bool]  # None = mindkét lista üres, nincs időzítés
     next_schedule: Optional[datetime]
+    last_schedule: Optional[datetime]
 
 
 def evaluate_schedule(
@@ -75,7 +76,7 @@ def evaluate_schedule(
     `next_schedule` = a legközelebbi jövőbeli találat bármelyik listából.
     """
     if not on_crons and not off_crons:
-        return ScheduleResult(timed_state=None, next_schedule=None)
+        return ScheduleResult(timed_state=None, next_schedule=None, last_schedule=None)
 
     last_on = _last_before(on_crons, now)
     last_off = _last_before(off_crons, now)
@@ -90,14 +91,34 @@ def evaluate_schedule(
         timed_state = last_on > last_off
 
     next_schedule = _next_after(on_crons + off_crons, now)
-    return ScheduleResult(timed_state=timed_state, next_schedule=next_schedule)
+    last_schedule = (
+        max(value for value in (last_on, last_off) if value is not None)
+        if last_on is not None or last_off is not None
+        else None
+    )
+    return ScheduleResult(
+        timed_state=timed_state,
+        next_schedule=next_schedule,
+        last_schedule=last_schedule,
+    )
+
+
+def external_schedule_is_active(
+    external_changed_at: Optional[datetime], last_cron_schedule: Optional[datetime]
+) -> bool:
+    """Return whether an external schedule command is newer than the last cron event."""
+    return external_changed_at is not None and (
+        last_cron_schedule is None or external_changed_at >= last_cron_schedule
+    )
 
 
 def _last_before(exprs: list[str], now: datetime) -> Optional[datetime]:
     best: Optional[datetime] = None
     for expr in exprs:
         try:
-            candidate = croniter(expr, now).get_prev(datetime)
+            # Include an occurrence exactly at the current minute boundary. croniter's
+            # get_prev() is otherwise exclusive and would detect it one minute late.
+            candidate = croniter(expr, now + timedelta(microseconds=1)).get_prev(datetime)
         except Exception:  # rossz cron-kifejezés — kihagyjuk, nem dobunk kivételt
             continue
         if best is None or candidate > best:
@@ -119,18 +140,21 @@ def _next_after(exprs: list[str], now: datetime) -> Optional[datetime]:
 
 @dataclass
 class PersistedState:
-    """SPEC.md B3.2 — a Store-ban tárolt Controller-állapot. `timed_state` szándékosan
-    NEM szerepel itt: sosem perzisztált, mindig frissen számolt (B3.2/#3)."""
+    """SPEC.md B3.2 — persisted controller and external schedule state."""
 
     main_state: str  # AUTO / MANUAL
     expected_state: bool
     manual_until: Optional[str]  # ISO 8601, csak MANUAL + manual_timeout>0 esetén
+    external_schedule_state: Optional[bool] = None
+    external_schedule_changed_at: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
             "main_state": self.main_state,
             "expected_state": self.expected_state,
             "manual_until": self.manual_until,
+            "external_schedule_state": self.external_schedule_state,
+            "external_schedule_changed_at": self.external_schedule_changed_at,
         }
 
     @classmethod
@@ -142,6 +166,12 @@ class PersistedState:
                 main_state=raw["main_state"],
                 expected_state=bool(raw["expected_state"]),
                 manual_until=raw.get("manual_until"),
+                external_schedule_state=(
+                    bool(raw["external_schedule_state"])
+                    if raw.get("external_schedule_state") is not None
+                    else None
+                ),
+                external_schedule_changed_at=raw.get("external_schedule_changed_at"),
             )
         except (KeyError, TypeError, ValueError):
             return None

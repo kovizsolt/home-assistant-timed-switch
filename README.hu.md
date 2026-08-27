@@ -21,7 +21,7 @@ Támogatott célentitások: `switch`, `input_boolean`, `light`, `script` és `bu
 
 ## Követelmények
 
-- Home Assistant 2025.9.4 vagy újabb;
+- Home Assistant 2026.8.2 vagy újabb;
 - hozzáférés a Home Assistant `config` könyvtárához;
 - újraindítási jogosultság;
 - a Lovelace felület használatához a `frontend` és `lovelace` integráció.
@@ -201,7 +201,7 @@ A fontosabb létrehozott entitások (`<név>` a névből képzett azonosító):
 |---|---|
 | `switch.<név>_expected` | A kívánt célállapot; kézzel is vezérelhető |
 | `switch.<név>_device` | A tényleges célentitás kétirányú tükre |
-| `switch.<név>_timed_state` | Az ütemezés nyers állapota; kézi váltása ütemezési eseményt szimulál |
+| `switch.<név>_timed_state` | Az ütemezett állapot; UI-ból vagy automatizálásból a következő cron-találatig felülbírálható |
 | `switch.<név>_is_manual_mode` | Kézi felülbírálás be- vagy kikapcsolása |
 | `number.<név>_manual_timeout` | Következő kézi felülbírálások időkorlátja |
 | `number.<név>_sync_interval` | Az állapot-szinkronizálás periódusa |
@@ -214,6 +214,24 @@ konfigurációs és diagnosztikai entitásokat alapból elrejthet a normál
 eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
 
 ### Fontos viselkedés
+
+- A `switch.<név>_timed_state` entitást külső automatizálás szabványos
+  `switch.turn_on` vagy `switch.turn_off` művelettel állíthatja, például
+  napfelkeltekor vagy napnyugtakor. A beállítás a következő tényleges ON/OFF
+  cron-találatig, cron nélkül korlátlan ideig marad érvényben, és
+  újraindítást is túlél. A percenkénti cron-ellenőrzés ezalatt is fut.
+
+  ```yaml
+  automation:
+    - alias: Kerti világítás bekapcsolása napnyugtakor
+      triggers:
+        - trigger: sun
+          event: sunset
+      actions:
+        - action: switch.turn_on
+          target:
+            entity_id: switch.kerti_vilagitas_timed_state
+  ```
 
 - MANUAL módban az ütemezés a háttérben tovább frissül, de nem írja felül az
   eszközt a timeout lejártáig.

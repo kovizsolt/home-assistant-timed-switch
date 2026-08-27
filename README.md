@@ -20,7 +20,7 @@ Supported target domains: `switch`, `input_boolean`, `light`, `script`, and `but
 
 ## Requirements
 
-- Home Assistant 2025.9.4 or newer;
+- Home Assistant 2026.8.2 or newer;
 - access to the Home Assistant `config` directory;
 - permission to restart Home Assistant;
 - the `frontend` and `lovelace` integrations for the custom dashboard card.
@@ -191,7 +191,7 @@ Main entities (`<name>` is the slug generated from the instance name):
 |---|---|
 | `switch.<name>_expected` | Desired target state; can also be controlled manually |
 | `switch.<name>_device` | Two-way mirror of the physical target entity |
-| `switch.<name>_timed_state` | Raw schedule output; manual changes simulate schedule events |
+| `switch.<name>_timed_state` | Scheduled state; UI or automation commands override it until the next cron occurrence |
 | `switch.<name>_is_manual_mode` | Enables or clears manual override mode |
 | `number.<name>_manual_timeout` | Timeout used for subsequent manual overrides |
 | `number.<name>_sync_interval` | Physical-state verification interval |
@@ -204,6 +204,24 @@ some configuration and diagnostic entities from the normal device view by defaul
 they can be enabled from the device's entity list.
 
 ### Important behavior
+
+- External automations can set `switch.<name>_timed_state` with the standard
+  `switch.turn_on` or `switch.turn_off` action, for example at sunrise or sunset.
+  The value remains active until the next actual ON/OFF cron occurrence, indefinitely
+  when no cron is configured, and survives restarts. Cron evaluation continues every
+  minute while the external value is active.
+
+  ```yaml
+  automation:
+    - alias: Turn garden lights on at sunset
+      triggers:
+        - trigger: sun
+          event: sunset
+      actions:
+        - action: switch.turn_on
+          target:
+            entity_id: switch.garden_lights_timed_state
+  ```
 
 - In MANUAL mode, the schedule continues to update in the background but does not
   overwrite the device until the timeout expires.

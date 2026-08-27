@@ -74,6 +74,7 @@ SUFFIX_OFF_CRONS = "off_crons"
 
 ATTR_DEVICE_AVAILABLE = "device_available"
 ATTR_NEXT_SCHEDULE = "next_schedule"
+ATTR_EXTERNAL_SCHEDULE_ACTIVE = "external_schedule_active"
 
 SIGNAL_UPDATE = f"{DOMAIN}_update"
 # --------------------------------------------------------------------------------------------------

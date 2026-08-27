@@ -64,6 +64,7 @@ from .helpers import (
     CronFieldCountError,
     PersistedState,
     evaluate_schedule,
+    external_schedule_is_active,
     normalize_cron_list,
     parse_cron_list,
 )
@@ -115,6 +116,8 @@ class Controller:
         self.manual_until: Optional[datetime] = None
         self.sync_until: Optional[datetime] = None
         self.next_schedule: Optional[datetime] = None
+        self.external_schedule_state: Optional[bool] = None
+        self.external_schedule_changed_at: Optional[datetime] = None
         self.since_last_change: Optional[datetime] = None
         self.device_last_changed: Optional[datetime] = None
         self._expected_just_changed: bool = False
@@ -146,10 +149,26 @@ class Controller:
         # dt_util.now() (local), NEM dt_util.utcnow(). Minden más (perzisztált abszolút
         # időpontok, since/device_last_changed) továbbra is UTC-ben marad.
         sched = evaluate_schedule(self.on_crons, self.off_crons, dt_util.now())
-        self.timed_state = sched.timed_state if sched.timed_state is not None else self.default_state
         self.next_schedule = sched.next_schedule
 
         persisted = PersistedState.from_dict(await self._store.async_load())
+        if persisted is not None:
+            self.external_schedule_state = persisted.external_schedule_state
+            self.external_schedule_changed_at = _parse_iso(
+                persisted.external_schedule_changed_at
+            )
+        if self.external_schedule_state is not None and external_schedule_is_active(
+            self.external_schedule_changed_at, sched.last_schedule
+        ):
+            self.timed_state = bool(self.external_schedule_state)
+        else:
+            self.external_schedule_state = None
+            self.external_schedule_changed_at = None
+            self.timed_state = (
+                sched.timed_state
+                if sched.timed_state is not None
+                else self.default_state
+            )
         if persisted is None:
             self.main.state = STATE_AUTO
             self.expected_state = self.default_state
@@ -207,8 +226,19 @@ class Controller:
 
     async def async_save(self) -> None:
         manual_until_iso = self.manual_until.isoformat() if self.manual_until else None
+        external_changed_at_iso = (
+            self.external_schedule_changed_at.isoformat()
+            if self.external_schedule_changed_at
+            else None
+        )
         await self._store.async_save(
-            PersistedState(self.main.state, self.expected_state, manual_until_iso).to_dict()
+            PersistedState(
+                self.main.state,
+                self.expected_state,
+                manual_until_iso,
+                self.external_schedule_state,
+                external_changed_at_iso,
+            ).to_dict()
         )
 
     # ------------------------------------------------------------------ MainActions --------
@@ -282,6 +312,8 @@ class Controller:
     # ------------------------------------------------------------------ platform entitások hívják --
 
     async def async_toggle_timed_state(self, value: bool) -> None:
+        self.external_schedule_state = value
+        self.external_schedule_changed_at = dt_util.utcnow()
         await self.main.handle(EVT_SCHEDULE_ON if value else EVT_SCHEDULE_OFF, self)
         await self.async_save()
         await self._notify()
@@ -441,7 +473,17 @@ class Controller:
         self.next_schedule = sched.next_schedule
         if sched.timed_state is None:
             return
-        if sched.timed_state != self.timed_state:
+        external_was_active = self.external_schedule_changed_at is not None
+        external_is_active = external_schedule_is_active(
+            self.external_schedule_changed_at, sched.last_schedule
+        )
+        if external_is_active:
+            await self._notify()
+            return
+        if external_was_active:
+            self.external_schedule_state = None
+            self.external_schedule_changed_at = None
+        if external_was_active or sched.timed_state != self.timed_state:
             self._expected_just_changed = False
             await self.main.handle(EVT_SCHEDULE_ON if sched.timed_state else EVT_SCHEDULE_OFF, self)
             await self.async_save()
