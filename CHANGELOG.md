@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.2.0044] - 2026-08-29
+
 ### Added
 
 - External automations can override the scheduled state through the standard Timed State switch until the next actual cron occurrence; the override is persisted while minute-aligned cron evaluation continues in the background.
