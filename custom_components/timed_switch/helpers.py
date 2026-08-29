@@ -112,6 +112,11 @@ def external_schedule_is_active(
     )
 
 
+def seconds_until_next_minute(now: datetime) -> float:
+    """Return a monotonic delay that realigns the next wake-up to wall-clock time."""
+    return 60.0 - now.second - now.microsecond / 1_000_000
+
+
 def _last_before(exprs: list[str], now: datetime) -> Optional[datetime]:
     best: Optional[datetime] = None
     for expr in exprs:

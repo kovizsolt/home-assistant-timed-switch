@@ -59,6 +59,7 @@ validate_static() {
 import json
 import os
 import pathlib
+import re
 import sys
 
 repo = pathlib.Path(os.environ["VALIDATION_REPO_DIR"])
@@ -105,6 +106,30 @@ if len(component_dirs) == 1:
         errors.append("manifest domain must match the integration directory name")
     if manifest.get("integration_type") != "helper":
         errors.append("manifest integration_type must be helper")
+
+    version_path = repo / "VERSION"
+    generated_version_path = integration_dir / "_version.py"
+    version = version_path.read_text(encoding="utf-8").strip() \
+        if version_path.is_file() else None
+    if version is None:
+        errors.append("VERSION file is missing")
+    elif not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]{4}", version):
+        errors.append("VERSION must use major.minor.build with a four-digit build")
+    if manifest.get("version") != version:
+        errors.append("manifest version must match VERSION")
+    if not generated_version_path.is_file():
+        errors.append("generated _version.py is missing")
+    elif version is not None:
+        generated_source = generated_version_path.read_text(encoding="utf-8")
+        expected_assignment = f'__version__ = "{version}"'
+        if expected_assignment not in generated_source:
+            errors.append("_version.py version must match VERSION")
+        if not re.search(
+            r'^__version_time__ = "[^"T]+T[^" ]+(?:Z|[+-][0-9]{2}:[0-9]{2})"$',
+            generated_source,
+            re.MULTILINE,
+        ):
+            errors.append("_version.py must contain an ISO 8601 version timestamp with offset")
 
     codeowners = manifest.get("codeowners")
     if not isinstance(codeowners, list) or not codeowners \

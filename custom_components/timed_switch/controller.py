@@ -24,7 +24,6 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import (
     async_call_later,
     async_track_state_change_event,
-    async_track_time_change,
     async_track_time_interval,
 )
 from homeassistant.util import dt as dt_util
@@ -67,6 +66,7 @@ from .helpers import (
     external_schedule_is_active,
     normalize_cron_list,
     parse_cron_list,
+    seconds_until_next_minute,
 )
 from .state_machine import StateMachine
 from .transition_table import (
@@ -454,11 +454,24 @@ class Controller:
     def _start_cron_ticker(self) -> None:
         if self._cron_cancel:
             self._cron_cancel()
-        # A cron szintaxisa perc-pontosságú, ezért minden perc pontos kezdetén értékelünk.
-        # Az interval tracker a HA indulási másodpercéhez igazodna, és 0–59 s késést okozna.
-        self._cron_cancel = async_track_time_change(
-            self.hass, self._async_cron_tick, second=0
+            self._cron_cancel = None
+        self._schedule_next_cron_tick()
+
+    def _schedule_next_cron_tick(self) -> None:
+        """Use a monotonic delay, recalculated from the current wall clock each minute."""
+        self._cron_cancel = async_call_later(
+            self.hass,
+            seconds_until_next_minute(dt_util.now()),
+            self._async_cron_timer_fired,
         )
+
+    async def _async_cron_timer_fired(self, now) -> None:
+        # Rearm before evaluation so an exception cannot permanently stop the ticker.
+        # Recalculating from the current wall clock also recovers from clock jumps in
+        # at most one monotonic interval instead of waiting for an obsolete timestamp.
+        self._cron_cancel = None
+        self._schedule_next_cron_tick()
+        await self._async_cron_tick(now)
 
     async def _async_cron_tick(self, _now) -> None:
         if not self.on_crons and not self.off_crons:

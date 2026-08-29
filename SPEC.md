@@ -1,8 +1,6 @@
 # Állapotgép specifikáció — Home Assistant / Python
 
-> Ez a dokumentum két részből áll: **A rész** — a munkamódszer (ezt ne töröld, ez a projekt "alkotmánya"). **B rész** — a kitöltendő specifikációs sablon.
->  A cél: olyan specifikáció, amiben nincs értelmezési rés, ezért a kód nem *értelmezése*, hanem *átirata* a specifikációnak.
->  **Nyelvi megjegyzés:** a próza–szótár nyelvi megosztás szabálya kanonikusan a `CLAUDE.md` 0. pontjában van rögzítve. Az alábbi B2 szótár emiatt szándékosan tér el az A2/2 pont illusztrációjától, ami egy általános, projekt-független példát mutat be.
+> Ez a dokumentum két részből áll: **A rész** — a munkamódszer (ezt ne töröld, ez a projekt "alkotmánya"). **B rész** — a kitöltendő specifikációs sablon. A cél: olyan specifikáció, amiben nincs értelmezési rés, ezért a kód nem *értelmezése*, hanem *átirata* a specifikációnak. **Nyelvi megjegyzés:** a próza–szótár nyelvi megosztás szabálya kanonikusan a `CLAUDE.md` 0. pontjában van rögzítve. Az alábbi B2 szótár emiatt szándékosan tér el az A2/2 pont illusztrációjától, ami egy általános, projekt-független példát mutat be.
 
 ---
 
@@ -117,9 +115,7 @@ Manuális beavatkozás esetén a kapcsoló egy konfigurált időtartamig ("manua
 
 ## B2. Szótár
 
-> Ez a gép **két független állapotgépből** áll (SPEC.md A4 elve szerint: "ha egymástól független dolgok futnak párhuzamosan → két külön állapotgép"):
-> - **FŐ gép** — mi vezérli a kapcsolót: az ütemterv, vagy egy aktív manuális felülbírálás. (angolul: *main state machine*)
-> - **ELERHETOSEGI gép** — a vezérelt entitás elérhető-e; tisztán diagnosztikai, NEM hat a FŐ gép működésére (failsafe elv). (angolul: *availability state machine*)
+> Ez a gép **két független állapotgépből** áll (SPEC.md A4 elve szerint: "ha egymástól független dolgok futnak párhuzamosan → két külön állapotgép"): - **FŐ gép** — mi vezérli a kapcsolót: az ütemterv, vagy egy aktív manuális felülbírálás. (angolul: *main state machine*) - **ELERHETOSEGI gép** — a vezérelt entitás elérhető-e; tisztán diagnosztikai, NEM hat a FŐ gép működésére (failsafe elv). (angolul: *availability state machine*)
 
 ### B2.1 Állapotok — FŐ gép
 
@@ -175,63 +171,34 @@ Manuális beavatkozás esetén a kapcsoló egy konfigurált időtartamig ("manua
 
 **Device-csoportosítás:** a fenti táblázat összes entitása (a `target_entity_id` kivételével, ami külső entitás) egyetlen közös HA Device alá tartozik, komponens-példányonként egy Device (azonosító: `(DOMAIN, entry_id)`). Enélkül az entitások a HA UI-n szórt, kontextus nélküli listaelemekként jelennek meg, nem egy áttekinthető eszközkártyaként — ez a felhasználói felület szempontjából ugyanolyan kötelező elem, mint bármelyik fenti sor.
 
-**Entity-category (elsődleges vs. másodlagos entitás):** a Device az összetartozást
-biztosítja, az `entity_category` pedig kizárólag a HA eszközoldalán történő helyes
-szétválogatást. Vezérlő vagy normál működési állapotot mutató entitás nem lehet
-`diagnostic`, mert akkor a HA elrejti az automatikus dashboard-ajánlásokból.
+**Entity-category (elsődleges vs. másodlagos entitás):** a Device az összetartozást biztosítja, az `entity_category` pedig kizárólag a HA eszközoldalán történő helyes szétválogatást. Vezérlő vagy normál működési állapotot mutató entitás nem lehet `diagnostic`, mert akkor a HA elrejti az automatikus dashboard-ajánlásokból.
 
-- elsődleges (nincs `entity_category`) — `switch.<name>_expected`,
-  `switch.<name>_timed_state`, `switch.<name>_device`,
-  `sensor.<name>_manual_remaining`, valamint `switch.<name>_virtual`, ha létrejön;
-- `entity_category: config` — `switch.<name>_is_manual_mode`,
-  `number.<name>_manual_timeout`, `number.<name>_sync_interval`;
-- `entity_category: diagnostic` — `binary_sensor.<name>_problem`,
-  `sensor.<name>_since_last_change`, `sensor.<name>_device_last_changed`.
+- elsődleges (nincs `entity_category`) — `switch.<name>_expected`, `switch.<name>_timed_state`, `switch.<name>_device`, `sensor.<name>_manual_remaining`, valamint `switch.<name>_virtual`, ha létrejön;
+- `entity_category: config` — `switch.<name>_is_manual_mode`, `number.<name>_manual_timeout`, `number.<name>_sync_interval`;
+- `entity_category: diagnostic` — `binary_sensor.<name>_problem`, `sensor.<name>_since_last_change`, `sensor.<name>_device_last_changed`.
 
 ### B2.3a Dashboard-kártya
 
-Az integráció saját, egyetlen dashboard-elemként hozzáadható
-`custom:timed-switch-card` kártyát szállít. A kártya nem tartalmaz új állapotlogikát,
-hanem a B2.3 entitásainak egységes nézete és kezelőfelülete.
+Az integráció saját, egyetlen dashboard-elemként hozzáadható `custom:timed-switch-card` kártyát szállít. A kártya nem tartalmaz új állapotlogikát, hanem a B2.3 entitásainak egységes nézete és kezelőfelülete.
 
-- Kötelező konfigurációja egyetlen `entity`: a példány
-  `switch.<name>_expected` entitása.
-- A többi entitást a rögzített B2.3 entity_id-szuffixumok alapján automatikusan azonosítja;
-  ezeket a felhasználónak nem kell egyenként megadnia.
+- Kötelező konfigurációja egyetlen `entity`: a példány `switch.<name>_expected` entitása.
+- A többi entitást a rögzített B2.3 entity_id-szuffixumok alapján automatikusan azonosítja; ezeket a felhasználónak nem kell egyenként megadnia.
 - Egy kártya pontosan egy Timed Switch config entryt / Device-ot jelenít meg.
-- Egy vizuális blokkban mutatja legalább: fő célállapot, AUTO/MANUAL mód, nyers ütemezett
-  állapot, fizikai eszközállapot (ha értelmezett), manuális hátralévő idő, timeout,
-  ellenőrzési időköz, következő ütemezés és hibajelzés.
+- Egy vizuális blokkban mutatja legalább: fő célállapot, AUTO/MANUAL mód, nyers ütemezett állapot, fizikai eszközállapot (ha értelmezett), manuális hátralévő idő, timeout, ellenőrzési időköz, következő ütemezés és hibajelzés.
 - Minden vezérlés a meglévő entitások szabványos HA service call-ját használja.
-- Hiányzó vagy letiltott másodlagos entitásnál a működő részek használhatók maradnak, a
-  hiányzó adat helyén `—` jelenik meg.
+- Hiányzó vagy letiltott másodlagos entitásnál a működő részek használhatók maradnak, a hiányzó adat helyén `—` jelenik meg.
 - A kártya mobilon és asztali nézetben is egyetlen reszponzív kártya marad.
-- A kártya belső megjelenítése a HA beépített `entities` kártyáját és natív entity-row
-  vezérlőit használja; saját ON/OFF gombot, number inputot, dátumformázót vagy párhuzamos
-  vizuális komponenst nem implementál. Így a kapcsolók, számmezők, tipográfia, térközök,
-  témák és timestamp-formátumok a HA többi komponensével azonosak.
-  A timestamp sorok rövid, numerikus `datetime/short` megjelenítést használnak, nem
-  hosszú, hónapnevet kiíró szöveges dátumot.
-  A Sections grid számára csak az oszlopszélességet adja meg; fix `rows`/`min_rows`
-  magasságot nem állít be, ezért a kártya a teljes entitáslistához igazodik, nem vágja le
-  és nem teszi belsőleg görgethetővé a tartalmat.
-- A JavaScript-modult az integráció saját statikus URL-en szolgálja ki és verziózott
-  Lovelace resource-ként automatikusan regisztrálja; kézi fájlmásolás/resource-felvétel
-  nem kell, és integrációfrissítéskor a böngésző nem tarthatja meg a régi kártyakódot.
-- A kártya regisztrálja magát a HA kártyaválasztójában (`window.customCards`), és HA
-  2026.6+-on `getEntitySuggestion` segítségével a Timed Switch fő entitásához ajánlja fel
-  magát. Így UI-ból, YAML írása nélkül, egyetlen kártyaként adható a dashboardhoz.
+- A kártya belső megjelenítése a HA beépített `entities` kártyáját és natív entity-row vezérlőit használja; saját ON/OFF gombot, number inputot, dátumformázót vagy párhuzamos vizuális komponenst nem implementál. Így a kapcsolók, számmezők, tipográfia, térközök, témák és timestamp-formátumok a HA többi komponensével azonosak. A timestamp sorok rövid, numerikus `datetime/short` megjelenítést használnak, nem hosszú, hónapnevet kiíró szöveges dátumot. A Sections grid számára csak az oszlopszélességet adja meg; fix `rows`/`min_rows` magasságot nem állít be, ezért a kártya a teljes entitáslistához igazodik, nem vágja le és nem teszi belsőleg görgethetővé a tartalmat.
+- A JavaScript-modult az integráció saját statikus URL-en szolgálja ki és verziózott Lovelace resource-ként automatikusan regisztrálja; kézi fájlmásolás/resource-felvétel nem kell, és integrációfrissítéskor a böngésző nem tarthatja meg a régi kártyakódot.
+- A kártya regisztrálja magát a HA kártyaválasztójában (`window.customCards`), és HA 2026.6+-on `getEntitySuggestion` segítségével a Timed Switch fő entitásához ajánlja fel magát. Így UI-ból, YAML írása nélkül, egyetlen kártyaként adható a dashboardhoz.
 
 ### B2.4 Időzítők / paraméterek
 
-A konfigurációs és dashboard-UI cron mezők minden kifejezést öt mezőre
-normalizálnak. A hiányzó mezőket jobb oldalon `*` értékekkel egészítik ki. Az ötödik
-utáni mezőket csak akkor dobják el, ha mind `*`; más többletmező a meglévő
-cron-validációs hibát eredményezi.
+A konfigurációs és dashboard-UI cron mezők minden kifejezést öt mezőre normalizálnak. A hiányzó mezőket jobb oldalon `*` értékekkel egészítik ki. Az ötödik utáni mezőket csak akkor dobják el, ha mind `*`; más többletmező a meglévő cron-validációs hibát eredményezi.
 
 | Név | Érték | Jelentés |
 |---|---|---|
-| `on_crons` / `off_crons` | felhasználó adja meg — cron-szerű kifejezések listája, soronként vagy vesszővel elválasztva, `#` a komment, `croniter` szintaxis, perc-pontosság | Külön ON és OFF cron-lista (nem egy kombinált tábla). **Élőben (reload nélkül) szerkeszthető** az options flow-n keresztül. A cron-kiértékelés külső ütemezési parancs alatt is minden perc pontos kezdetén (`second=0`) fut és frissíti a `next_schedule`-t; a következő tényleges ON vagy OFF cron-találat megszünteti a külső parancs elsőbbségét. Ha mindkét lista üres, nincs automatikus cron-váltás: külső parancs hiányában a `timed_state` a `default_state` értéken marad, aktív külső parancs pedig korlátlan ideig érvényes; `next_schedule` értelmezhetetlen (`—`). A cronmotor független a `sync_interval`-tól. **A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában értelmezzük** (nem UTC-ben) — pl. `0 8 * * *` a felhasználó helyi 8:00-ját jelenti. |
+| `on_crons` / `off_crons` | felhasználó adja meg — cron-szerű kifejezések listája, soronként vagy vesszővel elválasztva, `#` a komment, `croniter` szintaxis, perc-pontosság | Külön ON és OFF cron-lista (nem egy kombinált tábla). **Élőben (reload nélkül) szerkeszthető** az options flow-n keresztül. A cron-kiértékelés külső ütemezési parancs alatt is minden perc pontos kezdetén fut és frissíti a `next_schedule`-t. A ticker monotón késleltetéssel ébred, minden ébredéskor az aktuális helyi falórából újraszámolja a következő percfordulóig tartó késleltetést, és a következő ébredést a cronértékelés előtt regisztrálja. Emiatt előre vagy visszafelé történő rendszeróra-ugrás, illetve egy kiértékelési hiba sem állíthatja le tartósan: legfeljebb egy 60 másodperces monotón intervallumon belül újraigazodik. A következő tényleges ON vagy OFF cron-találat megszünteti a külső parancs elsőbbségét. Ha mindkét lista üres, nincs automatikus cron-váltás: külső parancs hiányában a `timed_state` a `default_state` értéken marad, aktív külső parancs pedig korlátlan ideig érvényes; `next_schedule` értelmezhetetlen (`—`). A cronmotor független a `sync_interval`-tól. **A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában értelmezzük** (nem UTC-ben) — pl. `0 8 * * *` a felhasználó helyi 8:00-ját jelenti. |
 | `manual_timeout` | felhasználó adja meg (mp), alapértelmezett **600** | Mennyi ideig érvényes egy manuális felülbírálás, mielőtt automatikusan visszaáll az ütemtervre. **Speciális eset: `manual_timeout=0`** → nincs lejárati timer; a `MANUAL` állapot a következő `schedule_on`/`schedule_off` eseményig tart (lásd B3.A). Futásidőben felülbírálható a `number.<name>_manual_timeout` entitással, függetlenül a config alapértéktől. **Élő módosítás hatálya:** ha épp fut egy MANUAL visszaszámlálás, az új érték csak a KÖVETKŐ manuális belépéskor/timer-újraindításkor (B3.1/B3.A) érvényesül — a már elindított timert nem írja felül azonnal. |
 | `sync_interval` | felhasználó adja meg (mp), alapértelmezett **60** | A poller (`state_sync`) periódusideje. **Speciális eset: `sync_interval=0`** → a poller teljesen kikapcsolva, `state_sync` esemény soha nem generálódik, amíg vissza nem áll `>0` értékre. Futásidőben felülbírálható a `number.<name>_sync_interval` entitással. **Élő módosítás hatálya:** ezzel szemben **azonnal** újraindítja a pollert az új intervallummal (aszimmetria a `manual_timeout` élő módosításához képest — szándékos: a poller egy önálló, folyamatos ciklus, nincs "aktuális futása", amit ne lehetne azonnal újraindítani). |
 | `default_state` | felhasználó adja meg (BE/KI) | A kapcsoló kezdő értéke, ha nincs érvényes mentett állapot és/vagy még nincs kiértékelhető ütemterv. |
@@ -239,9 +206,7 @@ cron-validációs hibát eredményezi.
 
 ### B2.4a Célkapcsoló kiválasztása a config flow-ban
 
-A Timed Switch létrehozása teljesen UI-vezérelt, és a cél kiválasztása külön lépésben
-történik. A meglévő állapotgép és a `target_entity_id` jelentése nem változik; kizárólag
-annak UI-beli meghatározási módja bővül.
+A Timed Switch létrehozása teljesen UI-vezérelt, és a cél kiválasztása külön lépésben történik. A meglévő állapotgép és a `target_entity_id` jelentése nem változik; kizárólag annak UI-beli meghatározási módja bővül.
 
 | Választás | Elérhetőség | Eredmény |
 |---|---|---|
@@ -251,21 +216,13 @@ annak UI-beli meghatározási módja bővül.
 
 További kötelező szabályok:
 
-- A Virtual Switch opcionális együttműködés: hiánya nem akadályozhatja a Timed Switch
-  telepítését, betöltését, frissítését vagy meglévő config entryinek működését.
-- Ha a `virtual_switch` nincs jelen, a `new_virtual_switch` választás nem jelenik meg; nem
-  jelenhet meg működésképtelen menüpont.
-- Az `existing_entity` selector a támogatott domaineket továbbra is felajánlja. Ha a
-  Virtual Switch jelen van, annak `*_main` kapcsolói normál `switch` célként választhatók.
-- Új Virtual Switch létrehozását a `virtual_switch` saját config flow-ja végzi. A
-  TimedSwitch nem másolja és nem birtokolja annak állapotgépét.
-- A létrehozott Virtual Switch önálló config entry és Device marad. Törlése, átnevezése és
-  állapot-perzisztenciája a `virtual_switch` integráció felelőssége.
-- A TimedSwitch a kapcsolódás után kizárólag szabványos HA switch service callokon és
-  state change eseményeken keresztül használja a Virtual Switch `main` entitását, ugyanúgy,
-  mint bármely más külső `switch` célt.
-- Ha az új Virtual Switch létrehozását a felhasználó megszakítja vagy az sikertelen, a
-  Timed Switch config flow visszatér a célválasztáshoz, és nem hoz létre félkész entryt.
+- A Virtual Switch opcionális együttműködés: hiánya nem akadályozhatja a Timed Switch telepítését, betöltését, frissítését vagy meglévő config entryinek működését.
+- Ha a `virtual_switch` nincs jelen, a `new_virtual_switch` választás nem jelenik meg; nem jelenhet meg működésképtelen menüpont.
+- Az `existing_entity` selector a támogatott domaineket továbbra is felajánlja. Ha a Virtual Switch jelen van, annak `*_main` kapcsolói normál `switch` célként választhatók.
+- Új Virtual Switch létrehozását a `virtual_switch` saját config flow-ja végzi. A TimedSwitch nem másolja és nem birtokolja annak állapotgépét.
+- A létrehozott Virtual Switch önálló config entry és Device marad. Törlése, átnevezése és állapot-perzisztenciája a `virtual_switch` integráció felelőssége.
+- A TimedSwitch a kapcsolódás után kizárólag szabványos HA switch service callokon és state change eseményeken keresztül használja a Virtual Switch `main` entitását, ugyanúgy, mint bármely más külső `switch` célt.
+- Ha az új Virtual Switch létrehozását a felhasználó megszakítja vagy az sikertelen, a Timed Switch config flow visszatér a célválasztáshoz, és nem hoz létre félkész entryt.
 - Timed Switch törlése nem törölheti a hozzá kapcsolt Virtual Switch entryt vagy Device-ot.
 
 ## B3. Átmeneti tábla

@@ -94,5 +94,21 @@ class ExternalScheduleTests(unittest.TestCase):
         self.assertTrue(restored.external_schedule_state)
         self.assertEqual(restored.external_schedule_changed_at, changed_at)
 
+
+class CronTickerAlignmentTests(unittest.TestCase):
+    def test_delay_targets_the_next_minute_boundary(self):
+        now = datetime(2026, 8, 27, 9, 10, 45, 500000, tzinfo=timezone.utc)
+        self.assertEqual(helpers.seconds_until_next_minute(now), 14.5)
+
+    def test_exact_minute_boundary_targets_the_following_minute(self):
+        now = datetime(2026, 8, 27, 9, 10, 0, tzinfo=timezone.utc)
+        self.assertEqual(helpers.seconds_until_next_minute(now), 60.0)
+
+    def test_wall_clock_jump_is_recalculated_from_the_new_time(self):
+        before_jump = datetime(2026, 8, 27, 9, 10, 50, tzinfo=timezone.utc)
+        after_backward_jump = datetime(2026, 8, 27, 8, 2, 20, tzinfo=timezone.utc)
+        self.assertEqual(helpers.seconds_until_next_minute(before_jump), 10.0)
+        self.assertEqual(helpers.seconds_until_next_minute(after_backward_jump), 40.0)
+
 if __name__ == "__main__":
     unittest.main()

@@ -8,10 +8,14 @@ COMPONENT = ROOT / "custom_components" / "timed_switch"
 
 
 class DashboardContractTests(unittest.TestCase):
-    def test_cron_ticker_is_aligned_to_the_minute_boundary(self):
+    def test_cron_ticker_is_monotonic_and_realigns_to_each_minute_boundary(self):
         controller = (COMPONENT / "controller.py").read_text()
-        self.assertIn("async_track_time_change", controller)
-        self.assertIn("second=0", controller)
+        self.assertNotIn("async_track_time_change", controller)
+        self.assertIn("async_call_later", controller)
+        callback = controller.index("async def _async_cron_timer_fired")
+        reschedule = controller.index("self._schedule_next_cron_tick()", callback)
+        evaluation = controller.index("await self._async_cron_tick", callback)
+        self.assertLess(reschedule, evaluation)
 
     def test_UI1_frontend_is_an_integration_dependency(self):
         manifest = json.loads((COMPONENT / "manifest.json").read_text())

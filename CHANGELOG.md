@@ -2,8 +2,7 @@
 
 All notable changes to Timed Switch will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Versions use the project's `major.minor.build` numbering scheme.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions use the project's `major.minor.build` numbering scheme.
 
 ## [Unreleased]
 
@@ -23,6 +22,7 @@ Versions use the project's `major.minor.build` numbering scheme.
 
 ### Fixed
 
+- Minute-aligned cron evaluation now uses a self-rearming monotonic delay, preventing backward system-clock jumps or evaluation errors from stalling future cron checks.
 - ON/OFF cron expressions entered in configuration or the dashboard are normalized to five fields: missing fields are filled with `*`, wildcard-only extra fields are removed, and other extra fields retain the existing validation error behavior.
 - Hassfest validation now recognizes the HTTP dependency, config-entry-only setup, and complete config-flow descriptions.
 - Dashboard contract tests follow the punctuation used by the current card labels.
