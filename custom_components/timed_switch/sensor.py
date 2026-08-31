@@ -81,7 +81,6 @@ class ManualRemainingSensor(_BaseSensor):
         minutes, seconds = divmod(rem, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-
 class SyncRemainingSensor(_BaseSensor):
     """sensor.<slug>_sync_remaining — a következő eszközszinkronig hátralévő idő."""
 
@@ -98,7 +97,6 @@ class SyncRemainingSensor(_BaseSensor):
         hours, rem = divmod(remaining, 3600)
         minutes, seconds = divmod(rem, 60)
         return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
-
 
 class SinceLastChangeSensor(_BaseSensor):
     """sensor.<slug>_since_last_change — az expected_state utolsó váltásának abszolút

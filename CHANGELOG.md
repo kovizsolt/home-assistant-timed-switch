@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Classified each config entry as a device so the integration remains visible on the Home Assistant Integrations dashboard.
+
 ## [0.2.0044] - 2026-08-29
 
 ### Added

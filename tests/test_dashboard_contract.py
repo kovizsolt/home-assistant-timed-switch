@@ -85,6 +85,12 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn("self.sync_until = dt_util.utcnow() +", controller)
         self.assertIn("class SyncRemainingSensor", sensor)
 
+    def test_integration_entries_are_visible_on_the_integrations_dashboard(self):
+        self.assertEqual(
+            json.loads((COMPONENT / "manifest.json").read_text())["integration_type"],
+            "device",
+        )
+
     def test_UI8_empty_time_values_have_readable_placeholders(self):
         sensor = (COMPONENT / "sensor.py").read_text()
         switch = (COMPONENT / "switch.py").read_text()

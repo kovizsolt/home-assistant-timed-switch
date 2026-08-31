@@ -563,16 +563,16 @@ class Controller:
             self._manual_timer_cancel()
             self._manual_timer_cancel = None
 
+    def _stop_remaining_ticker(self) -> None:
+        if self._remaining_ticker_cancel:
+            self._remaining_ticker_cancel()
+            self._remaining_ticker_cancel = None
+
     def _start_remaining_ticker(self) -> None:
         self._stop_remaining_ticker()
         self._remaining_ticker_cancel = async_track_time_interval(
             self.hass, self._async_tick_remaining, timedelta(seconds=1)
         )
-
-    def _stop_remaining_ticker(self) -> None:
-        if self._remaining_ticker_cancel:
-            self._remaining_ticker_cancel()
-            self._remaining_ticker_cancel = None
 
     async def _async_tick_remaining(self, _now) -> None:
         await self._notify()

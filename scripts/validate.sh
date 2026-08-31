@@ -104,8 +104,8 @@ if len(component_dirs) == 1:
         errors.append(f"manifest.json missing keys: {', '.join(missing)}")
     if manifest.get("domain") != integration_dir.name:
         errors.append("manifest domain must match the integration directory name")
-    if manifest.get("integration_type") != "helper":
-        errors.append("manifest integration_type must be helper")
+    if manifest.get("integration_type") != "device":
+        errors.append("manifest integration_type must be device")
 
     version_path = repo / "VERSION"
     generated_version_path = integration_dir / "_version.py"

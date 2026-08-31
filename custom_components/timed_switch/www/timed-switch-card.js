@@ -21,6 +21,7 @@ class TimedSwitchRemainingRow extends HTMLElement {
     this.style.setProperty("--state-icon-color", disabled ? "var(--disabled-text-color)" : "");
     this.style.setProperty("--primary-text-color", disabled ? "var(--disabled-text-color)" : "");
   }
+
 }
 
 if (!customElements.get("timed-switch-remaining-row")) {
