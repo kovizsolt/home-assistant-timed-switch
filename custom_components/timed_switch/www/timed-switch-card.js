@@ -6,11 +6,12 @@ class TimedSwitchRemainingRow extends HTMLElement {
     this._row = document.createElement("hui-sensor-entity-row");
     this._row.setConfig({ entity: config.entity, name: config.name });
     this.replaceChildren(this._row);
+    this._startTimer();
   }
 
   set hass(hass) {
+    this._hass = hass;
     if (!this._row || !this._config) return;
-    this._row.hass = hass;
     const duration = Number(hass.states[this._config.duration_entity]?.state);
     const disabled = duration === 0;
     this.toggleAttribute("disabled", disabled);
@@ -20,8 +21,54 @@ class TimedSwitchRemainingRow extends HTMLElement {
     this.style.pointerEvents = disabled ? "none" : "";
     this.style.setProperty("--state-icon-color", disabled ? "var(--disabled-text-color)" : "");
     this.style.setProperty("--primary-text-color", disabled ? "var(--disabled-text-color)" : "");
+    this._render();
   }
 
+  connectedCallback() {
+    this._startTimer();
+  }
+
+  disconnectedCallback() {
+    clearInterval(this._timer);
+    this._timer = undefined;
+  }
+
+  _startTimer() {
+    if (!this.isConnected || this._timer) return;
+    this._timer = setInterval(() => this._render(), 1000);
+  }
+
+  _countdown(state) {
+    if (!state || state.state === "unknown" || state.state === "unavailable") return "--:--";
+    const deadline = Date.parse(state.state);
+    if (!Number.isFinite(deadline)) return "--:--";
+    const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+    const hours = Math.floor(remaining / 3600);
+    const minutes = Math.floor((remaining % 3600) / 60);
+    const seconds = remaining % 60;
+    return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":");
+  }
+
+  _render() {
+    if (!this._row || !this._config || !this._hass) return;
+    const state = this._hass.states[this._config.entity];
+    if (!state) {
+      this._row.hass = this._hass;
+      return;
+    }
+    const displayAttributes = { ...state.attributes };
+    delete displayAttributes.device_class;
+    const displayState = {
+      ...state,
+      state: this._countdown(state),
+      attributes: displayAttributes,
+    };
+    const displayStates = Object.create(this._hass.states);
+    Object.defineProperty(displayStates, this._config.entity, { value: displayState });
+    const displayHass = Object.create(this._hass);
+    Object.defineProperty(displayHass, "states", { value: displayStates });
+    this._row.hass = displayHass;
+  }
 }
 
 if (!customElements.get("timed-switch-remaining-row")) {

@@ -163,7 +163,7 @@ Main entities (`<name>` is the slug generated from the instance name):
 | `text.<name>_on_crons`, `text.<name>_off_crons` | Live schedule editing |
 | `binary_sensor.<name>_problem` | Target availability problem indicator |
 
-Additional sensors show the manual and synchronization countdowns and the times of the most recent target and physical-device state changes. Because the live countdowns are Home Assistant states that change every second, exclude `sensor.<name>_manual_remaining` and `sensor.<name>_sync_remaining` from Recorder configuration to prevent Activity and history flooding. Home Assistant may hide some configuration and diagnostic entities from the normal device view by default; they can be enabled from the device's entity list.
+Additional sensors expose the stable manual and synchronization deadlines and the times of the most recent target and physical-device state changes. The Timed Switch Card calculates both live `HH:MM:SS` countdowns locally in the browser, so their once-per-second display updates do not create Home Assistant state changes and do not fill Activity or History. Home Assistant may hide some configuration and diagnostic entities from the normal device view by default; they can be enabled from the device's entity list.
 
 ### Important behavior
 

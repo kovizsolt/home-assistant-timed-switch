@@ -124,8 +124,6 @@ class Controller:
 
         self._last_own_context_id: Optional[str] = None
         self._manual_timer_cancel = None
-        self._remaining_ticker_cancel = None
-        self._sync_ticker_cancel = None
         self._poller_cancel = None
         self._cron_cancel = None
         self._unsub_state_changed = None
@@ -216,8 +214,6 @@ class Controller:
             self._unsub_state_changed()
         for cancel in (
             self._manual_timer_cancel,
-            self._remaining_ticker_cancel,
-            self._sync_ticker_cancel,
             self._poller_cancel,
             self._cron_cancel,
         ):
@@ -288,14 +284,12 @@ class Controller:
         else:
             self.manual_until = None
             self._cancel_manual_timer()
-            self._stop_remaining_ticker()
 
     async def start_manual_timer_if_needed(self, ctx) -> None:
         await self.restart_manual_timer_if_needed(ctx)
 
     async def clear_manual_timer(self, ctx) -> None:
         self._cancel_manual_timer()
-        self._stop_remaining_ticker()
         self.manual_until = None
 
     def manual_timeout_is_zero(self, ctx) -> bool:
@@ -433,16 +427,10 @@ class Controller:
             self._poller_cancel()
             self._poller_cancel = None
         self.sync_until = None
-        if self._sync_ticker_cancel:
-            self._sync_ticker_cancel()
-            self._sync_ticker_cancel = None
         if self.sync_interval > 0:
             self.sync_until = dt_util.utcnow() + timedelta(seconds=self.sync_interval)
             self._poller_cancel = async_track_time_interval(
                 self.hass, self._async_poll, timedelta(seconds=self.sync_interval)
-            )
-            self._sync_ticker_cancel = async_track_time_interval(
-                self.hass, self._async_tick_remaining, timedelta(seconds=1)
             )
 
     async def _async_poll(self, _now) -> None:
@@ -549,7 +537,6 @@ class Controller:
             return
         delay = max(0, (self.manual_until - dt_util.utcnow()).total_seconds())
         self._manual_timer_cancel = async_call_later(self.hass, delay, self._async_manual_expiry)
-        self._start_remaining_ticker()
 
     async def _async_manual_expiry(self, _now) -> None:
         self._manual_timer_cancel = None
@@ -562,20 +549,6 @@ class Controller:
         if self._manual_timer_cancel:
             self._manual_timer_cancel()
             self._manual_timer_cancel = None
-
-    def _stop_remaining_ticker(self) -> None:
-        if self._remaining_ticker_cancel:
-            self._remaining_ticker_cancel()
-            self._remaining_ticker_cancel = None
-
-    def _start_remaining_ticker(self) -> None:
-        self._stop_remaining_ticker()
-        self._remaining_ticker_cancel = async_track_time_interval(
-            self.hass, self._async_tick_remaining, timedelta(seconds=1)
-        )
-
-    async def _async_tick_remaining(self, _now) -> None:
-        await self._notify()
 
     # ------------------------------------------------------------------ derived / notify ---------
 

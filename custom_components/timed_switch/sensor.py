@@ -1,9 +1,8 @@
 # --------------------------------------------------------------------------------------------------
 # File          : custom_components/timed_switch/sensor.py
 #
-# SPEC.md B2.3 sensor entitások: _manual_remaining, _sync_remaining (élő óó:pp:ss),
-# _since_last_change és
-# _device_last_changed (device_class: timestamp, abszolút időpont).
+# SPEC.md B2.3 sensor entitások: a visszaszámlálások stabil céldátumai, valamint az
+# _since_last_change és _device_last_changed abszolút időpontok.
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
 
@@ -66,37 +65,36 @@ class _BaseSensor(SensorEntity):
 
 
 class ManualRemainingSensor(_BaseSensor):
-    """sensor.<slug>_manual_remaining — élő visszaszámláló, óó:pp:ss (SPEC.md B2.3)."""
+    """Expose the manual deadline; the dashboard renders the live countdown."""
 
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:timer-sand"
+
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_MANUAL_REMAINING, "Manual Remaining")
 
     @property
-    def native_value(self) -> str:
-        remaining = self._controller.manual_remaining_seconds
-        if remaining is None:
-            return "--:--"
-        hours, rem = divmod(remaining, 3600)
-        minutes, seconds = divmod(rem, 60)
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    def native_value(self) -> Optional[datetime]:
+        if not self._controller.is_manual:
+            return None
+        return self._controller.manual_until
+
 
 class SyncRemainingSensor(_BaseSensor):
-    """sensor.<slug>_sync_remaining — a következő eszközszinkronig hátralévő idő."""
+    """Expose the sync deadline; the dashboard renders the live countdown."""
 
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:timer-sync"
 
     def __init__(self, controller: Controller, slug: str) -> None:
         super().__init__(controller, slug, SUFFIX_SYNC_REMAINING, "Sync Remaining")
 
     @property
-    def native_value(self) -> str:
-        remaining = self._controller.sync_remaining_seconds
-        if remaining is None:
-            return "--:--"
-        hours, rem = divmod(remaining, 3600)
-        minutes, seconds = divmod(rem, 60)
-        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    def native_value(self) -> Optional[datetime]:
+        if self._controller.sync_interval <= 0:
+            return None
+        return self._controller.sync_until
+
 
 class SinceLastChangeSensor(_BaseSensor):
     """sensor.<slug>_since_last_change — az expected_state utolsó váltásának abszolút

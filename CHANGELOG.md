@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- Moved the Manual Remaining and Sync Remaining one-second countdown updates into the dashboard browser while exposing only stable deadline timestamps to Home Assistant, preventing the displays from flooding Activity and History.
+
 ## [0.3.0048] - 2026-09-02
 
 ### Changed

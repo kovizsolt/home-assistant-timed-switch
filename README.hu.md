@@ -163,7 +163,7 @@ A fontosabb létrehozott entitások (`<név>` a névből képzett azonosító):
 | `text.<név>_on_crons`, `text.<név>_off_crons` | Az ütemezések élő szerkesztése |
 | `binary_sensor.<név>_problem` | A célentitás elérhetőségi hibája |
 
-A további szenzorok a manuális és szinkronizálási visszaszámlálást, valamint az utolsó cél- és eszközállapot-változás idejét mutatják. Mivel az élő visszaszámlálók másodpercenként változó HA-állapotok, az Activity/Recorder előzmények elárasztásának elkerüléséhez zárd ki a `sensor.<név>_manual_remaining` és `sensor.<név>_sync_remaining` entitást a Recorder konfigurációjában. A Home Assistant egyes konfigurációs és diagnosztikai entitásokat alapból elrejthet a normál eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
+A további szenzorok a stabil manuális és szinkronizálási céldátumot, valamint az utolsó cél- és eszközállapot-változás idejét adják át. A Timed Switch Card mindkét élő `óó:pp:ss` visszaszámlálást helyben, a böngészőben számolja, ezért a másodpercenkénti kijelzésfrissítés nem hoz létre Home Assistant state-változást, és nem tölti az Activity vagy History előzményeit. A Home Assistant egyes konfigurációs és diagnosztikai entitásokat alapból elrejthet a normál eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
 
 ### Fontos viselkedés
 

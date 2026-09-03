@@ -81,9 +81,27 @@ class DashboardContractTests(unittest.TestCase):
     def test_UI7_sync_remaining_is_driven_by_the_sync_deadline(self):
         controller = (COMPONENT / "controller.py").read_text()
         sensor = (COMPONENT / "sensor.py").read_text()
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
         self.assertIn("def sync_remaining_seconds", controller)
         self.assertIn("self.sync_until = dt_util.utcnow() +", controller)
         self.assertIn("class SyncRemainingSensor", sensor)
+        self.assertIn("return self._controller.sync_until", sensor)
+        self.assertIn("Date.parse(state.state)", card)
+
+    def test_UI7b_countdowns_tick_only_in_the_browser(self):
+        controller = (COMPONENT / "controller.py").read_text()
+        sensor = (COMPONENT / "sensor.py").read_text()
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
+        self.assertNotIn("_async_tick_remaining", controller)
+        self.assertNotIn("_remaining_ticker_cancel", controller)
+        self.assertNotIn("_sync_ticker_cancel", controller)
+        self.assertNotIn("timedelta(seconds=1)", controller)
+        self.assertIn("_attr_device_class = SensorDeviceClass.TIMESTAMP", sensor)
+        self.assertIn("setInterval(() => this._render(), 1000)", card)
+        self.assertIn("Math.floor((deadline - Date.now()) / 1000)", card)
+        self.assertIn("delete displayAttributes.device_class", card)
+        self.assertIn("attributes: displayAttributes", card)
+        self.assertIn('return "--:--"', card)
 
     def test_integration_entries_are_visible_on_the_integrations_dashboard(self):
         self.assertEqual(
@@ -92,9 +110,9 @@ class DashboardContractTests(unittest.TestCase):
         )
 
     def test_UI8_empty_time_values_have_readable_placeholders(self):
-        sensor = (COMPONENT / "sensor.py").read_text()
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
         switch = (COMPONENT / "switch.py").read_text()
-        self.assertEqual(sensor.count('return "--:--"'), 2)
+        self.assertIn('return "--:--"', card)
         self.assertIn('next_schedule else "--"', switch)
 
     def test_UI9_zero_duration_disables_its_remaining_row(self):
