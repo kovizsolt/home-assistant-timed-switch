@@ -1,9 +1,12 @@
-"""Editable ON/OFF cron-list entities for the Timed Switch dashboard card."""
+"""Configuration text entities for Timed Switch."""
 from __future__ import annotations
+
+import re
 
 from homeassistant.components.text import TextEntity, TextMode
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
@@ -13,6 +16,7 @@ from .const import (
     DOMAIN,
     SUFFIX_OFF_CRONS,
     SUFFIX_ON_CRONS,
+    SUFFIX_TARGET_ENTITY,
 )
 from .controller import Controller
 
@@ -23,10 +27,47 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     slug: str = bucket["slug"]
     async_add_entities(
         [
-            CronListText(controller, slug, CONF_ON_CRONS, SUFFIX_ON_CRONS, "ON Schedule"),
-            CronListText(controller, slug, CONF_OFF_CRONS, SUFFIX_OFF_CRONS, "OFF Schedule"),
+            TargetEntityText(controller, slug),
+            CronListText(controller, slug, CONF_ON_CRONS, SUFFIX_ON_CRONS, "Schedule ON"),
+            CronListText(controller, slug, CONF_OFF_CRONS, SUFFIX_OFF_CRONS, "Schedule OFF"),
         ]
     )
+
+
+class TargetEntityText(TextEntity):
+    """Expose the currently controlled entity as a read-only config value."""
+
+    _attr_should_poll = False
+    _attr_has_entity_name = False
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_mode = TextMode.TEXT
+    _attr_icon = "mdi:target"
+
+    def __init__(self, controller: Controller, slug: str) -> None:
+        self._controller = controller
+        self.entity_id = f"text.{slug}_{SUFFIX_TARGET_ENTITY}"
+        self._attr_unique_id = f"{controller.entry.entry_id}_{SUFFIX_TARGET_ENTITY}"
+        self._attr_name = f"{controller.name} Target entity"
+        self._attr_native_min = len(controller.target_entity_id)
+        self._attr_native_max = len(controller.target_entity_id)
+        self._attr_pattern = re.escape(controller.target_entity_id)
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(DOMAIN, self._controller.entry.entry_id)},
+            name=self._controller.name,
+        )
+
+    @property
+    def native_value(self) -> str:
+        return self._controller.target_entity_id
+
+    async def async_set_value(self, value: str) -> None:
+        if value != self._controller.target_entity_id:
+            raise ServiceValidationError(
+                "Target entity is read-only; change it in the integration options"
+            )
 
 
 class CronListText(TextEntity):

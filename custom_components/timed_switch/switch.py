@@ -11,7 +11,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo, EntityCategory
+from homeassistant.helpers.entity import DeviceInfo
 
 from .const import (
     AVAIL_AVAILABLE,
@@ -78,7 +78,7 @@ class ExpectedSwitch(_BaseControllerSwitch):
     """switch.<slug>_expected — SPEC.md B2.3."""
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_EXPECTED, "Expected")
+        super().__init__(controller, slug, SUFFIX_EXPECTED, "Expected state")
         self._attr_icon = "mdi:target"
 
     @property
@@ -100,7 +100,7 @@ class TimedStateSwitch(_BaseControllerSwitch):
     """switch.<slug>_timed_state — SPEC.md B2.3."""
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_TIMED_STATE, "Timed State")
+        super().__init__(controller, slug, SUFFIX_TIMED_STATE, "Scheduled state")
         self._attr_icon = "mdi:calendar-clock"
 
     @property
@@ -129,10 +129,8 @@ class TimedStateSwitch(_BaseControllerSwitch):
 class IsManualModeSwitch(_BaseControllerSwitch):
     """switch.<slug>_is_manual_mode — SPEC.md B2.3."""
 
-    _attr_entity_category = EntityCategory.CONFIG
-
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_IS_MANUAL_MODE, "Manual Mode")
+        super().__init__(controller, slug, SUFFIX_IS_MANUAL_MODE, "Manual Override")
         self._attr_icon = "mdi:hand-back-right"
 
     @property
@@ -150,7 +148,7 @@ class DeviceSwitch(_BaseControllerSwitch):
     """switch.<slug>_device — a target_entity_id kétirányú tükre (SPEC.md B2.3)."""
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_DEVICE, "Device")
+        super().__init__(controller, slug, SUFFIX_DEVICE, "Device state")
         self._attr_icon = "mdi:power-plug"
 
     @property

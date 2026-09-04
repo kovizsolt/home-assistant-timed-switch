@@ -260,9 +260,10 @@ class TimedSwitchCard extends HTMLElement {
       interval: `number.${objectId}_sync_interval`,
       onCrons: `text.${objectId}_on_crons`,
       offCrons: `text.${objectId}_off_crons`,
-      problem: `binary_sensor.${objectId}_problem`,
+      status: `binary_sensor.${objectId}_status`,
       since: `sensor.${objectId}_since_last_change`,
       deviceChanged: `sensor.${objectId}_device_last_changed`,
+      timedChanged: `sensor.${objectId}_timed_state_last_changed`,
     };
   }
 
@@ -286,9 +287,9 @@ class TimedSwitchCard extends HTMLElement {
       || expected?.attributes?.friendly_name?.replace(/ Expected$/, "")
       || "Timed Switch";
     const rows = [
-      this._entityRow(ids.expected, "Target state:"),
+      this._entityRow(ids.expected, "Expected state:"),
       this._entityRow(ids.device, "Device state:"),
-      this._entityRow(ids.manual, "Manual override:"),
+      this._entityRow(ids.manual, "Manual Override:"),
       this._entityRow(ids.timed, "Scheduled state:"),
       { type: "section", label: "Schedule" },
       this._hass.states[ids.onCrons] ? {
@@ -300,21 +301,24 @@ class TimedSwitchCard extends HTMLElement {
       { type: "section", label: "Timing" },
       this._entityRow(ids.timeout, "Manual timeout:"),
       this._entityRow(ids.interval, "Sync interval:"),
-      this._remainingRow(ids.remaining, ids.timeout, "Manual remaining:"),
-      this._remainingRow(ids.syncRemaining, ids.interval, "Sync remaining:"),
+      this._remainingRow(ids.remaining, ids.timeout, "Time Until Override:"),
+      this._remainingRow(ids.syncRemaining, ids.interval, "Time Until Sync:"),
       { type: "section", label: "Status" },
       this._hass.states[ids.timed] ? {
         type: "attribute", entity: ids.timed, attribute: "next_schedule",
         name: "Next schedule:", icon: "mdi:calendar-clock",
         time_format: { type: "datetime", style: "short" },
       } : undefined,
-      this._entityRow(ids.since, "Target changed:", {
-        time_format: { type: "datetime", style: "short" },
-      }),
       this._entityRow(ids.deviceChanged, "Device changed:", {
         time_format: { type: "datetime", style: "short" },
       }),
-      this._entityRow(ids.problem, "Status:"),
+      this._entityRow(ids.since, "Expected changed:", {
+        time_format: { type: "datetime", style: "short" },
+      }),
+      this._entityRow(ids.timedChanged, "Scheduled state changed:", {
+        time_format: { type: "datetime", style: "short" },
+      }),
+      this._entityRow(ids.status, "Status:"),
     ].filter(Boolean);
     return {
       type: "entities", title, icon: "mdi:calendar-clock",

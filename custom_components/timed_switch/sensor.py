@@ -2,7 +2,7 @@
 # File          : custom_components/timed_switch/sensor.py
 #
 # SPEC.md B2.3 sensor entitások: a visszaszámlálások stabil céldátumai, valamint az
-# _since_last_change és _device_last_changed abszolút időpontok.
+# az Expected, Device és Timed State kapcsolók utolsó logikai állapotváltásának időpontjai.
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from .const import (
     SUFFIX_MANUAL_REMAINING,
     SUFFIX_SYNC_REMAINING,
     SUFFIX_SINCE_LAST_CHANGE,
+    SUFFIX_TIMED_STATE_LAST_CHANGED,
 )
 from .controller import Controller
 
@@ -34,8 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         [
             ManualRemainingSensor(controller, slug),
             SyncRemainingSensor(controller, slug),
-            SinceLastChangeSensor(controller, slug),
+            ExpectedLastChangedSensor(controller, slug),
             DeviceLastChangedSensor(controller, slug),
+            TimedStateLastChangedSensor(controller, slug),
         ]
     )
 
@@ -69,9 +71,10 @@ class ManualRemainingSensor(_BaseSensor):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:timer-sand"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_MANUAL_REMAINING, "Manual Remaining")
+        super().__init__(controller, slug, SUFFIX_MANUAL_REMAINING, "Time Until Override")
 
     @property
     def native_value(self) -> Optional[datetime]:
@@ -85,9 +88,10 @@ class SyncRemainingSensor(_BaseSensor):
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
     _attr_icon = "mdi:timer-sync"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_SYNC_REMAINING, "Sync Remaining")
+        super().__init__(controller, slug, SUFFIX_SYNC_REMAINING, "Time Until Sync")
 
     @property
     def native_value(self) -> Optional[datetime]:
@@ -96,7 +100,7 @@ class SyncRemainingSensor(_BaseSensor):
         return self._controller.sync_until
 
 
-class SinceLastChangeSensor(_BaseSensor):
+class ExpectedLastChangedSensor(_BaseSensor):
     """sensor.<slug>_since_last_change — az expected_state utolsó váltásának abszolút
     időpontja (SPEC.md B2.3, device_class: timestamp)."""
 
@@ -105,11 +109,11 @@ class SinceLastChangeSensor(_BaseSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_SINCE_LAST_CHANGE, "Since Last Change")
+        super().__init__(controller, slug, SUFFIX_SINCE_LAST_CHANGE, "Since Expected Change")
 
     @property
     def native_value(self) -> Optional[datetime]:
-        return self._controller.since_last_change
+        return self._controller.expected_last_changed
 
 
 class DeviceLastChangedSensor(_BaseSensor):
@@ -121,11 +125,31 @@ class DeviceLastChangedSensor(_BaseSensor):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, controller: Controller, slug: str) -> None:
-        super().__init__(controller, slug, SUFFIX_DEVICE_LAST_CHANGED, "Device Last Changed")
+        super().__init__(controller, slug, SUFFIX_DEVICE_LAST_CHANGED, "Since Device Change")
 
     @property
     def native_value(self) -> Optional[datetime]:
         return self._controller.device_last_changed
+
+
+class TimedStateLastChangedSensor(_BaseSensor):
+    """Expose the last actual change of the scheduled logical state."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:history"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, controller: Controller, slug: str) -> None:
+        super().__init__(
+            controller,
+            slug,
+            SUFFIX_TIMED_STATE_LAST_CHANGED,
+            "Since Timed State Change",
+        )
+
+    @property
+    def native_value(self) -> Optional[datetime]:
+        return self._controller.timed_state_last_changed
 # --------------------------------------------------------------------------------------------------
 # EOF
 # --------------------------------------------------------------------------------------------------

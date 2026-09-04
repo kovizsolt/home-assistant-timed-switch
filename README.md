@@ -144,7 +144,7 @@ type: custom:timed-switch-card
 entity: switch.garden_lights_expected
 ```
 
-The card shows the expected, physical, and scheduled states, manual mode, ON/OFF schedules, timing controls, next scheduled change, and diagnostics. If a secondary entity is disabled, the remaining controls continue to work.
+The card shows the expected, physical, and scheduled states, Manual Override, ON/OFF schedules, timing controls, next scheduled change, and diagnostics. If a secondary entity is disabled, the remaining controls continue to work.
 
 ## Usage
 
@@ -158,12 +158,18 @@ Main entities (`<name>` is the slug generated from the instance name):
 | `switch.<name>_device` | Two-way mirror of the physical target entity |
 | `switch.<name>_timed_state` | Scheduled state; UI or automation commands override it until the next cron occurrence |
 | `switch.<name>_is_manual_mode` | Enables or clears manual override mode |
-| `number.<name>_manual_timeout` | Timeout used for subsequent manual overrides |
-| `number.<name>_sync_interval` | Physical-state verification interval |
+| `number.<name>_manual_timeout` | Persisted timeout used for subsequent manual overrides |
+| `number.<name>_sync_interval` | Persisted physical-state verification interval |
 | `text.<name>_on_crons`, `text.<name>_off_crons` | Live schedule editing |
-| `binary_sensor.<name>_problem` | Target availability problem indicator |
+| `binary_sensor.<name>_status` | Target availability status indicator |
+| `sensor.<name>_manual_remaining` | Stable deadline for the remaining manual override |
+| `sensor.<name>_sync_remaining` | Stable deadline for the next synchronization |
+| `sensor.<name>_since_last_change` | Last actual Expected state change |
+| `sensor.<name>_device_last_changed` | Last actual Device ON/OFF state change |
+| `sensor.<name>_timed_state_last_changed` | Last actual Timed State change |
+| `text.<name>_target_entity` | Read-only ID of the entity controlled by this Timed Switch |
 
-Additional sensors expose the stable manual and synchronization deadlines and the times of the most recent target and physical-device state changes. The Timed Switch Card calculates both live `HH:MM:SS` countdowns locally in the browser, so their once-per-second display updates do not create Home Assistant state changes and do not fill Activity or History. Home Assistant may hide some configuration and diagnostic entities from the normal device view by default; they can be enabled from the device's entity list.
+The Device page places `Manual Override` under Controls. Its Diagnostic section contains the problem indicator, the stable manual and synchronization deadlines, and separate timestamps for the most recent `Device`, `Expected`, and `Timed State` logical changes. Attribute-only target updates do not reset the Device timestamp. The Timed Switch Card calculates both live `HH:MM:SS` countdowns locally in the browser, so their once-per-second display updates do not create Home Assistant state changes and do not fill Activity or History. Home Assistant may hide diagnostic entities from the normal device view by default; they can be enabled from the device's entity list.
 
 ### Important behavior
 
@@ -184,7 +190,7 @@ Additional sensors expose the stable manual and synchronization deadlines and th
 - In MANUAL mode, the schedule continues to update in the background but does not overwrite the device until the timeout expires.
 - With `manual_timeout: 0`, the next ON or OFF schedule event ends manual mode.
 - In AUTO mode, state verification corrects mismatches between the desired and physical states. It does not intervene in MANUAL mode.
-- When the target is `unknown` or `unavailable`, the control logic continues to run and the `Problem` binary sensor reports the fault.
+- When the target is `unknown` or `unavailable`, the control logic continues to run and the `Status` binary sensor reports the fault.
 - Runtime state is restored after a restart. A manual timeout that expired during downtime is taken into account during startup.
 
 ## Removal

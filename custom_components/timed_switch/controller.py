@@ -118,7 +118,8 @@ class Controller:
         self.next_schedule: Optional[datetime] = None
         self.external_schedule_state: Optional[bool] = None
         self.external_schedule_changed_at: Optional[datetime] = None
-        self.since_last_change: Optional[datetime] = None
+        self.expected_last_changed: Optional[datetime] = None
+        self.timed_state_last_changed: Optional[datetime] = None
         self.device_last_changed: Optional[datetime] = None
         self._expected_just_changed: bool = False
 
@@ -145,7 +146,7 @@ class Controller:
         # A cron-kifejezéseket a HA-ban konfigurált HELYI időzónában kell kiértékelni (a
         # felhasználó "0 8 * * *"-t helyi 8:00-ra ír, nem UTC-re) — ezért itt szándékosan
         # dt_util.now() (local), NEM dt_util.utcnow(). Minden más (perzisztált abszolút
-        # időpontok, since/device_last_changed) továbbra is UTC-ben marad.
+        # időpontok és a három állapotváltási időbélyeg) továbbra is UTC-ben marad.
         sched = evaluate_schedule(self.on_crons, self.off_crons, dt_util.now())
         self.next_schedule = sched.next_schedule
 
@@ -186,7 +187,8 @@ class Controller:
             self.main.state = STATE_AUTO
             self.expected_state = self.timed_state
 
-        self.since_last_change = now
+        self.expected_last_changed = now
+        self.timed_state_last_changed = now
 
         if self.target_domain != "button":
             self._unsub_state_changed = async_track_state_change_event(
@@ -243,10 +245,15 @@ class Controller:
         return
 
     async def set_timed_on(self, ctx) -> None:
-        self.timed_state = True
+        self._set_timed_state(True)
 
     async def set_timed_off(self, ctx) -> None:
-        self.timed_state = False
+        self._set_timed_state(False)
+
+    def _set_timed_state(self, value: bool) -> None:
+        if value != self.timed_state:
+            self.timed_state_last_changed = dt_util.utcnow()
+        self.timed_state = value
 
     async def set_expected_on(self, ctx) -> None:
         self._set_expected(True)
@@ -259,7 +266,12 @@ class Controller:
         self.expected_state = value
         self._expected_just_changed = changed
         if changed:
-            self.since_last_change = dt_util.utcnow()
+            self.expected_last_changed = dt_util.utcnow()
+
+    def _set_device_state(self, value: bool, changed_at: Optional[datetime] = None) -> None:
+        if value != self.device_state:
+            self.device_last_changed = changed_at or dt_util.utcnow()
+        self.device_state = value
 
     async def resync_expected_from_timed_and_sync_device(self, ctx) -> None:
         """SPEC.md B3.1 — AUTO belépéskor: expected_state := pillanatnyi timed_state."""
@@ -329,14 +341,30 @@ class Controller:
         await self.async_save()
         await self._notify()
 
-    async def async_set_manual_timeout(self, seconds: int) -> None:
+    async def async_set_manual_timeout(self, seconds: int, *, persist: bool = True) -> None:
         self.manual_timeout = max(0, int(seconds))
+        if persist:
+            self._persist_option(CONF_MANUAL_TIMEOUT, self.manual_timeout)
         await self._notify()
 
-    async def async_set_sync_interval(self, seconds: int) -> None:
+    async def async_set_sync_interval(self, seconds: int, *, persist: bool = True) -> None:
         self.sync_interval = max(0, int(seconds))
+        if persist:
+            self._persist_option(CONF_SYNC_INTERVAL, self.sync_interval)
         self._start_poller()
         await self._notify()
+
+    def _persist_option(self, key: str, value: int | str) -> None:
+        """Persist one option without overwriting values saved after setup."""
+        current_entry = self.hass.config_entries.async_get_entry(self.entry.entry_id)
+        if current_entry is None:
+            raise RuntimeError(f"Config entry {self.entry.entry_id} is no longer registered")
+        options = {**(current_entry.options or {}), key: value}
+        self.hass.config_entries.async_update_entry(current_entry, options=options)
+        self.entry = (
+            self.hass.config_entries.async_get_entry(self.entry.entry_id)
+            or current_entry
+        )
 
     # ------------------------------------------------------------------ target_entity_id I/O -----
 
@@ -359,8 +387,7 @@ class Controller:
     def _apply_initial_device_state(self, state: Optional[State]) -> None:
         if state is None or state.state in (STATE_UNAVAILABLE, STATE_UNKNOWN):
             return
-        self.device_state = state.state == STATE_ON
-        self.device_last_changed = dt_util.utcnow()
+        self._set_device_state(state.state == STATE_ON, state.last_changed)
         self.hass.async_create_task(self.avail.handle(EVT_BECAME_AVAILABLE, self))
 
     def _apply_initial_availability_only(self, state: Optional[State]) -> None:
@@ -387,13 +414,17 @@ class Controller:
             return
 
         new_bool = new.state == STATE_ON
-        self.device_state = new_bool
-        self.device_last_changed = dt_util.utcnow()
+        self._set_device_state(new_bool, new.last_changed)
 
         if old_unavail:
             # SPEC.md B2.2/#3-4 kizárás + B4/15: visszakapcsolódás sosem manual_change.
             await self.avail.handle(EVT_BECAME_AVAILABLE, self)
             await self._notify()
+            return
+
+        if (old.state == STATE_ON) == new_bool:
+            # A Home Assistant state_changed event can contain an attribute-only update.
+            # It must not reset the Device elapsed time or start/restart manual mode.
             return
 
         if new.context is not None and new.context.id == self._last_own_context_id:
@@ -527,8 +558,7 @@ class Controller:
         else:
             raise ValueError(f"Unsupported cron-list key: {key}")
 
-        options = {**(self.entry.options or {}), key: normalized_value}
-        self.hass.config_entries.async_update_entry(self.entry, options=options)
+        self._persist_option(key, normalized_value)
         await self._async_cron_tick(dt_util.now())
 
     def _schedule_manual_expiry(self) -> None:

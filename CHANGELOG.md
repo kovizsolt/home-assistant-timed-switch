@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Moved Manual Override to Controls and the two remaining-time sensors to Diagnostic, naming the latter Time Until Override and Time Until Sync consistently on the Device page and dashboard card.
+- Renamed the Configuration schedule entities to Schedule ON and Schedule OFF.
+- Renamed the Problem diagnostic entity and its entity ID to Status, including migration of existing registry entries.
+- Standardized the three primary switch labels on the Device page and dashboard card as Device state, Expected state, and Scheduled state.
+- Standardized the manual control label as Manual Override on the Device page and dashboard card.
+- Added separate Device, Expected, and Timed State change timestamps to the Diagnostic section and dashboard card.
+- Added a read-only Target entity sensor to the Configuration section so the controlled entity is visible from the Device page.
+
+### Fixed
+
+- Device change time and manual-mode handling now ignore target updates that change attributes without changing the logical ON/OFF state.
+- Manual Timeout and Sync Interval changes made through their number entities now persist in the config entry and survive Home Assistant restarts; subsequent number or schedule edits preserve all previously saved options instead of writing from a stale config-entry snapshot.
+
 ## [0.4.0049] - 2026-09-03
 
 ### Fixed

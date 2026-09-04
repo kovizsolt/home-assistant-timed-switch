@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------------------------------------
 # File          : custom_components/timed_switch/binary_sensor.py
 #
-# SPEC.md B2.3: binary_sensor.<slug>_problem — device_class: problem, ON ha az ELERHETOSEGI
+# SPEC.md B2.3: binary_sensor.<slug>_status — device_class: problem, ON ha az ELERHETOSEGI
 # gép UNAVAILABLE.
 # --------------------------------------------------------------------------------------------------
 from __future__ import annotations
@@ -12,7 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 
-from .const import AVAIL_UNAVAILABLE, DOMAIN, SUFFIX_PROBLEM
+from .const import AVAIL_UNAVAILABLE, DOMAIN, SUFFIX_STATUS
 from .controller import Controller
 
 
@@ -21,11 +21,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     controller: Controller = bucket["controller"]
     slug: str = bucket["slug"]
 
-    async_add_entities([ProblemBinarySensor(controller, slug)])
+    async_add_entities([StatusBinarySensor(controller, slug)])
 
 
-class ProblemBinarySensor(BinarySensorEntity):
-    """binary_sensor.<slug>_problem — SPEC.md B2.3."""
+class StatusBinarySensor(BinarySensorEntity):
+    """binary_sensor.<slug>_status — SPEC.md B2.3."""
 
     _attr_should_poll = False
     _attr_has_entity_name = False
@@ -34,9 +34,9 @@ class ProblemBinarySensor(BinarySensorEntity):
 
     def __init__(self, controller: Controller, slug: str) -> None:
         self._controller = controller
-        self.entity_id = f"binary_sensor.{slug}_{SUFFIX_PROBLEM}"
-        self._attr_unique_id = f"{controller.entry.entry_id}_{SUFFIX_PROBLEM}"
-        self._attr_name = f"{controller.name} Problem"
+        self.entity_id = f"binary_sensor.{slug}_{SUFFIX_STATUS}"
+        self._attr_unique_id = f"{controller.entry.entry_id}_{SUFFIX_STATUS}"
+        self._attr_name = f"{controller.name} Status"
 
     @property
     def device_info(self) -> DeviceInfo:

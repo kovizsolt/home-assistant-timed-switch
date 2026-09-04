@@ -35,6 +35,7 @@ from .const import (
     CARD_URL,
     DOMAIN,
     LEGACY_CONF_CHECK_INTERVAL,
+    LEGACY_SUFFIX_PROBLEM,
     PLATFORMS,
     SUFFIX_SYNC_INTERVAL,
     SUFFIX_DEVICE,
@@ -43,12 +44,14 @@ from .const import (
     SUFFIX_IS_MANUAL_MODE,
     SUFFIX_MANUAL_REMAINING,
     SUFFIX_SYNC_REMAINING,
+    SUFFIX_TARGET_ENTITY,
     SUFFIX_MANUAL_TIMEOUT,
     SUFFIX_ON_CRONS,
     SUFFIX_OFF_CRONS,
-    SUFFIX_PROBLEM,
+    SUFFIX_STATUS,
     SUFFIX_SINCE_LAST_CHANGE,
     SUFFIX_TIMED_STATE,
+    SUFFIX_TIMED_STATE_LAST_CHANGED,
     STORE_KEY,
     STORE_VERSION,
 )
@@ -112,6 +115,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = {"controller": controller, "slug": slug}
 
     _migrate_sync_interval_entity(hass, entry.entry_id, slug)
+    _migrate_status_entity(hass, entry.entry_id, slug)
+    _remove_invalid_target_sensor(hass, entry.entry_id)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _migrate_entity_categories(hass, slug)
 
@@ -120,12 +125,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def _update_listener(hass: HomeAssistant, updated_entry: ConfigEntry) -> None:
         """SPEC.md B2.4: cron-listák/manual_timeout/sync_interval élőben, reload nélkül."""
+        controller.entry = updated_entry
         data = {**updated_entry.data, **(updated_entry.options or {})}
         controller.on_crons = parse_cron_list(data.get(CONF_ON_CRONS, ""))
         controller.off_crons = parse_cron_list(data.get(CONF_OFF_CRONS, ""))
-        await controller.async_set_manual_timeout(int(data.get(CONF_MANUAL_TIMEOUT, controller.manual_timeout)))
+        await controller.async_set_manual_timeout(
+            int(data.get(CONF_MANUAL_TIMEOUT, controller.manual_timeout)),
+            persist=False,
+        )
         await controller.async_set_sync_interval(
-            int(data.get(CONF_SYNC_INTERVAL, data.get(LEGACY_CONF_CHECK_INTERVAL, controller.sync_interval)))
+            int(data.get(CONF_SYNC_INTERVAL, data.get(LEGACY_CONF_CHECK_INTERVAL, controller.sync_interval))),
+            persist=False,
         )
         _LOGGER.info("[%s] beállítások frissítve, élőben (reload nélkül)", controller.name)
 
@@ -144,16 +154,18 @@ def _migrate_entity_categories(hass: HomeAssistant, slug: str) -> None:
         f"switch.{slug}_{SUFFIX_EXPECTED}": None,
         f"switch.{slug}_{SUFFIX_TIMED_STATE}": None,
         f"switch.{slug}_{SUFFIX_DEVICE}": None,
-        f"sensor.{slug}_{SUFFIX_MANUAL_REMAINING}": None,
-        f"sensor.{slug}_{SUFFIX_SYNC_REMAINING}": None,
-        f"switch.{slug}_{SUFFIX_IS_MANUAL_MODE}": EntityCategory.CONFIG,
+        f"sensor.{slug}_{SUFFIX_MANUAL_REMAINING}": EntityCategory.DIAGNOSTIC,
+        f"sensor.{slug}_{SUFFIX_SYNC_REMAINING}": EntityCategory.DIAGNOSTIC,
+        f"switch.{slug}_{SUFFIX_IS_MANUAL_MODE}": None,
+        f"text.{slug}_{SUFFIX_TARGET_ENTITY}": EntityCategory.CONFIG,
         f"number.{slug}_{SUFFIX_MANUAL_TIMEOUT}": EntityCategory.CONFIG,
         f"number.{slug}_{SUFFIX_SYNC_INTERVAL}": EntityCategory.CONFIG,
         f"text.{slug}_{SUFFIX_ON_CRONS}": EntityCategory.CONFIG,
         f"text.{slug}_{SUFFIX_OFF_CRONS}": EntityCategory.CONFIG,
-        f"binary_sensor.{slug}_{SUFFIX_PROBLEM}": EntityCategory.DIAGNOSTIC,
+        f"binary_sensor.{slug}_{SUFFIX_STATUS}": EntityCategory.DIAGNOSTIC,
         f"sensor.{slug}_{SUFFIX_SINCE_LAST_CHANGE}": EntityCategory.DIAGNOSTIC,
         f"sensor.{slug}_{SUFFIX_DEVICE_LAST_CHANGED}": EntityCategory.DIAGNOSTIC,
+        f"sensor.{slug}_{SUFFIX_TIMED_STATE_LAST_CHANGED}": EntityCategory.DIAGNOSTIC,
     }
     for entity_id, category in categories.items():
         if (entry := registry.async_get(entity_id)) is not None and entry.entity_category != category:
@@ -172,6 +184,28 @@ def _migrate_sync_interval_entity(hass: HomeAssistant, entry_id: str, slug: str)
             new_entity_id=new_entity_id,
             new_unique_id=f"{entry_id}_{SUFFIX_SYNC_INTERVAL}",
         )
+
+
+def _migrate_status_entity(hass: HomeAssistant, entry_id: str, slug: str) -> None:
+    """Rename the former Problem registry entry without creating a duplicate."""
+    registry = er.async_get(hass)
+    old_unique_id = f"{entry_id}_{LEGACY_SUFFIX_PROBLEM}"
+    old_entity_id = registry.async_get_entity_id("binary_sensor", DOMAIN, old_unique_id)
+    new_entity_id = f"binary_sensor.{slug}_{SUFFIX_STATUS}"
+    if old_entity_id is not None and registry.async_get(new_entity_id) is None:
+        registry.async_update_entity(
+            old_entity_id,
+            new_entity_id=new_entity_id,
+            new_unique_id=f"{entry_id}_{SUFFIX_STATUS}",
+        )
+
+
+def _remove_invalid_target_sensor(hass: HomeAssistant, entry_id: str) -> None:
+    """Remove the sensor variant rejected by Home Assistant's sensor platform."""
+    registry = er.async_get(hass)
+    unique_id = f"{entry_id}_{SUFFIX_TARGET_ENTITY}"
+    if entity_id := registry.async_get_entity_id("sensor", DOMAIN, unique_id):
+        registry.async_remove(entity_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

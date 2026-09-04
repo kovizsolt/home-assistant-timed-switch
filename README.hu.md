@@ -158,12 +158,18 @@ A fontosabb létrehozott entitások (`<név>` a névből képzett azonosító):
 | `switch.<név>_device` | A tényleges célentitás kétirányú tükre |
 | `switch.<név>_timed_state` | Az ütemezett állapot; UI-ból vagy automatizálásból a következő cron-találatig felülbírálható |
 | `switch.<név>_is_manual_mode` | Kézi felülbírálás be- vagy kikapcsolása |
-| `number.<név>_manual_timeout` | Következő kézi felülbírálások időkorlátja |
-| `number.<név>_sync_interval` | Az állapot-szinkronizálás periódusa |
+| `number.<név>_manual_timeout` | A következő kézi felülbírálások újraindítást túlélő időkorlátja |
+| `number.<név>_sync_interval` | Az állapot-szinkronizálás újraindítást túlélő periódusa |
 | `text.<név>_on_crons`, `text.<név>_off_crons` | Az ütemezések élő szerkesztése |
-| `binary_sensor.<név>_problem` | A célentitás elérhetőségi hibája |
+| `binary_sensor.<név>_status` | A célentitás elérhetőségi állapota |
+| `sensor.<név>_manual_remaining` | A manuális felülbírálás hátralévő idejének stabil céldátuma |
+| `sensor.<név>_sync_remaining` | A következő szinkronizálás stabil céldátuma |
+| `sensor.<név>_since_last_change` | Az Expected állapot utolsó tényleges változása |
+| `sensor.<név>_device_last_changed` | A Device ON/OFF állapot utolsó tényleges változása |
+| `sensor.<név>_timed_state_last_changed` | A Timed State utolsó tényleges változása |
+| `text.<név>_target_entity` | A Timed Switch által vezérelt entitás csak olvasható azonosítója |
 
-A további szenzorok a stabil manuális és szinkronizálási céldátumot, valamint az utolsó cél- és eszközállapot-változás idejét adják át. A Timed Switch Card mindkét élő `óó:pp:ss` visszaszámlálást helyben, a böngészőben számolja, ezért a másodpercenkénti kijelzésfrissítés nem hoz létre Home Assistant state-változást, és nem tölti az Activity vagy History előzményeit. A Home Assistant egyes konfigurációs és diagnosztikai entitásokat alapból elrejthet a normál eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
+A Device oldalon a `Manual Override` a Controls blokkba kerül. A Diagnostic blokk tartalmazza a hibajelzést, a stabil manuális és szinkronizálási céldátumot, valamint külön időbélyeget a `Device`, `Expected` és `Timed State` logikai állapotának legutóbbi változásához. A célentitás kizárólag attribútumot módosító frissítése nem nullázza a Device eltelt idejét. A Timed Switch Card mindkét élő `óó:pp:ss` visszaszámlálást helyben, a böngészőben számolja, ezért a másodpercenkénti kijelzésfrissítés nem hoz létre Home Assistant state-változást, és nem tölti az Activity vagy History előzményeit. A Home Assistant a diagnosztikai entitásokat alapból elrejtheti a normál eszköznézetből; ezek az eszköz entitáslistáján engedélyezhetők.
 
 ### Fontos viselkedés
 
@@ -184,7 +190,7 @@ A további szenzorok a stabil manuális és szinkronizálási céldátumot, vala
 - MANUAL módban az ütemezés a háttérben tovább frissül, de nem írja felül az eszközt a timeout lejártáig.
 - `manual_timeout: 0` esetén a következő ON vagy OFF ütemezési esemény zárja le a manuális módot.
 - AUTO módban a szinkronizáló ellenőrzés kijavítja a kívánt és tényleges állapot eltérését. MANUAL módban nem avatkozik be.
-- `unknown` vagy `unavailable` cél esetén a vezérlési logika tovább fut, a hibát a `Problem` bináris szenzor jelzi.
+- `unknown` vagy `unavailable` cél esetén a vezérlési logika tovább fut, a hibát a `Status` bináris szenzor jelzi.
 - A futási állapot újraindítás után helyreáll; a közben lejárt kézi időkorlátot az integráció induláskor figyelembe veszi.
 
 ## Eltávolítás
