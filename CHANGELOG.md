@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.5.0066] - 2026-09-04
+
 ### Changed
 
 - Moved Manual Override to Controls and the two remaining-time sensors to Diagnostic, naming the latter Time Until Override and Time Until Sync consistently on the Device page and dashboard card.
