@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Added an opt-in HACS prerelease workflow with suffixed version validation, `dev`-targeted GitHub Pre-releases, stable finalization, maintainer documentation, and workspace commands.
+
 ## [0.5.0066] - 2026-09-04
 
 ### Changed
