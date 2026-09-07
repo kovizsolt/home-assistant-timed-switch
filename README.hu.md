@@ -34,6 +34,8 @@ A Python-függőséget (`croniter`) a Home Assistant a `manifest.json` alapján 
 5. Nyisd meg a **Beállítások → Eszközök és szolgáltatások → Integráció hozzáadása** oldalt.
 6. Keresd meg a **Timed Switch** integrációt, majd add hozzá.
 
+GitHub prerelease teszteléséhez nyisd meg a letöltött repository **Redownload** párbeszédablakát, bontsd ki a **Need a different version?** részt, majd válaszd ki a `pre-release` jelölésű verziót. A prerelease használata külön felhasználói döntés, normál stabil frissítésként nem jelenik meg.
+
 ### Kézi telepítés
 
 1. Másold a `custom_components/timed_switch` könyvtárat a Home Assistant konfigurációs könyvtárába, az alábbi struktúrával:

@@ -113,8 +113,13 @@ if len(component_dirs) == 1:
         if version_path.is_file() else None
     if version is None:
         errors.append("VERSION file is missing")
-    elif not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]{4}", version):
-        errors.append("VERSION must use major.minor.build with a four-digit build")
+    elif not re.fullmatch(
+        r"(?:[0-9]+\.[0-9]+\.[0-9]{4}|[0-9]+\.[0-9]+\.(?:0|[1-9][0-9]*)-[0-9A-Za-z](?:[0-9A-Za-z.-]*[0-9A-Za-z])?)",
+        version,
+    ):
+        errors.append(
+            "VERSION must use a four-digit stable build or an unpadded build with a prerelease suffix"
+        )
     if manifest.get("version") != version:
         errors.append("manifest version must match VERSION")
     if not generated_version_path.is_file():
