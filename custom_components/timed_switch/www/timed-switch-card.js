@@ -200,7 +200,11 @@ class TimedSwitchCard extends HTMLElement {
         required: true,
         selector: {
           entity: {
-            filter: { domain: "switch", integration: "timed_switch" },
+            filter: {
+              domain: "switch",
+              integration: "timed_switch",
+              device_class: "switch",
+            },
           },
         },
       }],
@@ -282,9 +286,13 @@ class TimedSwitchCard extends HTMLElement {
 
   _nativeConfig() {
     const ids = this._ids();
-    const expected = this._hass.states[ids.expected];
+    const entityRegistryEntry = this._hass.entities?.[ids.expected];
+    const device = entityRegistryEntry?.device_id
+      ? this._hass.devices?.[entityRegistryEntry.device_id]
+      : undefined;
     const title = this._config.name
-      || expected?.attributes?.friendly_name?.replace(/ Expected$/, "")
+      || device?.name_by_user
+      || device?.name
       || "Timed Switch";
     const rows = [
       this._entityRow(ids.expected, "Expected state:"),

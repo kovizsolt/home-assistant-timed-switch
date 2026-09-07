@@ -59,9 +59,19 @@ class DashboardContractTests(unittest.TestCase):
     def test_UI4b_card_has_a_filtered_graphical_editor(self):
         card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
         self.assertIn("static getConfigForm()", card)
-        self.assertIn('filter: { domain: "switch", integration: "timed_switch" }', card)
+        self.assertIn('integration: "timed_switch"', card)
+        self.assertIn('device_class: "switch"', card)
         self.assertIn("static getStubConfig(hass, entities = [], entitiesFill = [])", card)
         self.assertIn("TimedSwitchCard._isExpectedEntity", card)
+
+        switch = (COMPONENT / "switch.py").read_text()
+        self.assertIn("from homeassistant.components.switch import SwitchDeviceClass", switch)
+        expected_start = switch.index("class ExpectedSwitch")
+        expected_end = switch.index("class TimedStateSwitch", expected_start)
+        self.assertIn(
+            "_attr_device_class = SwitchDeviceClass.SWITCH",
+            switch[expected_start:expected_end],
+        )
 
     def test_UI5_controls_use_native_home_assistant_entity_rows(self):
         card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
@@ -138,6 +148,14 @@ class DashboardContractTests(unittest.TestCase):
         self.assertIn('SUFFIX_EXPECTED, "Expected state"', switch)
         self.assertIn('SUFFIX_TIMED_STATE, "Scheduled state"', switch)
         self.assertIn('SUFFIX_IS_MANUAL_MODE, "Manual Override"', switch)
+
+    def test_UI10a_card_title_uses_device_registry_name(self):
+        card = (COMPONENT / "www" / "timed-switch-card.js").read_text()
+        self.assertIn("this._hass.entities?.[ids.expected]", card)
+        self.assertIn("this._hass.devices?.[entityRegistryEntry.device_id]", card)
+        self.assertIn("device?.name_by_user", card)
+        self.assertIn("device?.name", card)
+        self.assertNotIn("friendly_name?.replace", card)
 
     def test_UI10b_device_page_categories_match_entity_roles(self):
         init_source = (COMPONENT / "__init__.py").read_text()

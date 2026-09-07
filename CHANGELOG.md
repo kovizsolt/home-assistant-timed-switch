@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- The dashboard card title now comes from the Home Assistant device registry instead of parsing the Expected entity's display name, so entity-label changes cannot alter the card title.
+- The dashboard card editor now lists only Expected switches instead of offering every Timed Switch control and rejecting invalid selections afterward.
+
 ## [0.5.0066] - 2026-09-04
 
 ### Changed
