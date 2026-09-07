@@ -1,5 +1,5 @@
 """Generated version metadata. Do not edit manually."""
 
-__version__ = "0.5.0066"
-__version_tuple__ = (0, 5, 66)
-__version_time__ = "2026-09-04T14:25:35+02:00"
+__version__ = "0.6.0076"
+__version_tuple__ = (0, 6, 76)
+__version_time__ = "2026-09-07T07:48:52+02:00"
